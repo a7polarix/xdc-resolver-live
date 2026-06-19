@@ -342,7 +342,7 @@ async function resolveSOL(domain) {
     // Fallback: Solscan API
     try {
         const data = await fetchJSON(`https://api.solscan.io/account?address=${domain.replace('.sol', '')}`);
-        if data?.data?.address) return { result: data.data.address, source: 'Solscan', chain: 'SOL' };
+        if (data?.data.address) return { result: data.data.address, source: 'Solscan', chain: 'SOL' };
     } catch {}
     return null;
 }
