@@ -1,0 +1,37 @@
+{
+  "object": "depin.diceroll.coherent_event",
+  "id": "roll_0x5b389a...",
+  "timestamp": "2026-06-12T19:42:00Z",
+  "infrastructure_nodes": {
+    "orchestrator": "wizard.depin",
+    "entropy_provider": "energy.depin",
+    "quantum_model": "physics.depin",
+    "tensor_resolver": "mathematics.depin"
+  },
+  "cosmological_state": {
+    "janus_metric_ratio": {
+      "positive_mass_sector": 1.00023,
+      "negative_mass_sector": -0.99977
+    },
+    "dark_artifacts_filtered": true
+  },
+  "mathematical_topology": {
+    "space_curvature": "non-euclidean",
+    "logos_weight": 1.15
+  },
+  "thermodynamics": {
+    "entropy_density_joules": 4.184,
+    "node_efficiency_pct": 98.4
+  },
+  "dice": {
+    "type": "d20",
+    "raw_value": 17,
+    "coherent_modifier": 2,
+    "final_value": 19
+  },
+  "resolution": {
+    "difficulty_class": 15,
+    "success": true,
+    "summary": "SUCCESS_BY_COHERENCE"
+  }
+}

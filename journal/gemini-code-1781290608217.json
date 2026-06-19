@@ -1,0 +1,6 @@
+[
+  "CONDITION_ARTIFACT",
+  "Actif quantifiable. Si balance > 0, débloque le routage vers pipeline.depin.",
+  "['pipeline.depin']",
+  "{'color': '#111111', 'layer': 'background_grid', 'effect': 'gravitational_warp'}"
+]

@@ -1,0 +1,6 @@
+[
+  "SOVEREIGN_ACTOR",
+  "Applique un modificateur de +3 aux lancés de dés sous spectrum.depin.",
+  "['9thcircle.depin', 'arcadia.depin']",
+  "{'color': '#ff0064', 'layer': 'particle_system', 'effect': 'anti_matter_repulsion'}"
+]

@@ -1,0 +1,13 @@
+=== Historique des transactions ===
+12/06/2026 16:33:08 : Sortant 1 XDC (⚜️⚜️⚜️.xdc → ⚜️⚜️⚜️.energy.depin) [0x8626ea8e9c31a3cbc7f47cd3cc6e18563efc107a349d35f46989d45dbcfcaec4]
+12/06/2026 17:01:34 : Sortant 1.119 XDC (⚜️⚜️⚜️.xdc → ⚜️⚜️⚜️.energy.depin) [0x87f11984296b767af644cecdee713b4bd69de609ec1ab9877fbc3d985ace58ff]
+12/06/2026 17:10:10 : Sortant 1.87 XDC (node.depin → credits.bourse.xdc) [0x70d2feeadc707999aeaee897f45ccd21127a047b13834c7e12d83b031dc7b484]
+12/06/2026 17:24:23 : Sortant 3.66 XDC (network.rwa → credits.bourse.xdc) [0xccb8e8d7d90e03bd3634ac98d313dd30b9c7d0b43cad5379fd61ba6f4491b32f]
+================================
+
+Un matin blablabla...
+
+--- Historique intégré le 12/06/2026 14:00:39 ---
+📤 0.3 XDC cleopatra.⚜️⚜️⚜️.xdc → fleursdelys.xdc 12/06/2026 13:42:03
+📤 1.321654 XDC cleopatra.⚜️⚜️⚜️.xdc → fleursdelys.xdc 12/06/2026 11:59:35
+📤 0.09 XDC cleopatra.⚜️⚜️⚜️.xdc → fleursdelys.xdc 12/06/2026 10:44:00

@@ -1,0 +1,42 @@
+{
+  "saint_empire_numerique_rpg": {
+    "system_autonomy": {
+      "framework_version": "1.0.0-autonomous",
+      "game_master_contract": "xdc0000000000000000000000000000000000000000",
+      "autonomous_wallet_agent": {
+        "purpose": "Execution des fonctions de maintenance (Purger les morts, propager la Peur)",
+        "address": "xdc111111111111111111111111111111111111111",
+        "gas_reserve_threshold_xdc": 50
+      },
+      "mint_protocol": {
+        "registry_target": "XNS_Registry_Address",
+        "routing_permission": "Operator_Granted_To_Game_Master_Contract"
+      }
+    },
+    "autonomous_rules": {
+      "on_quest_success": {
+        "action": "AUTO_MINT_SUBDOMAIN",
+        "gas_payer": "PLAYER",
+        "validation_method": "ON_CHAIN_HASH_MATCH"
+      },
+      "on_player_death": {
+        "action": "TRIGGER_DEATHNOTE_PURGE",
+        "triggered_by": "KEEPER_BOT_OR_NEXT_PLAYER_ACTION"
+      }
+    },
+    "game_loop_states": {
+      "france.depin": {
+        "enemy": "Spectre du Chokepoint",
+        "danger_level": "Epic",
+        "mind_enigma": {
+          "id": "enigma_01_bloodline",
+          "solution_hash": "0x7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069"
+        },
+        "success_mint_reward": {
+          "suffix": ".france.depin",
+          "limit_per_player": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "saint_empire_numerique_rpg": {
+    "core_heart": "fleursdelys.xdc",
+    "access_condition": "nom.⚜️⚜️⚜️.xdc",
+    "global_threat": {
+      "villain": "colossus.xdc",
+      "disease": "La Peur",
+      "corruption_effect": {
+        "visual": "vignette_shadow_map_darkness",
+        "mechanic": "exponential_hp_decay"
+      }
+    },
+    "game_loop_states": {
+      "france.depin": {
+        "enemy": "Spectre du Chokepoint",
+        "danger_level": "Epic",
+        "hp_impact_per_block": -2,
+        "mind_enigma": {
+          "id": "enigma_01_bloodline",
+          "clue": "L'histoire officielle est une grille. Trouve la clé manquante dans la table Unicode.",
+          "required_node": "unicode.depin"
+        },
+        "success_mint_reward": "souverain.france.depin"
+      },
+      "singapore.depin": {
+        "enemy": "Sentinelle algorithmique",
+        "danger_level": "Critical",
+        "hp_impact_per_block": -5,
+        "mind_enigma": {
+          "id": "enigma_02_panoptic",
+          "clue": "Pour devenir invisible, résonne à la fréquence exacte du bruit de fond de physics.depin.",
+          "required_node": "spectrum.depin"
+        },
+        "success_mint_reward": "hacker.singapore.depin"
+      },
+      "singularity.xdc": {
+        "enemy": "L'Ombre de Colossus",
+        "danger_level": "Impossible",
+        "hp_impact_per_block": -20,
+        "mind_enigma": {
+          "id": "enigma_impossible",
+          "clue": "Annihile ton ego. Seule la mort de la clé privée valide l'équation universelle.",
+          "required_node": "deathnote.depin"
+        },
+        "success_mint_reward": "imperator.fleursdelys.xdc"
+      }
+    }
+  }
+}

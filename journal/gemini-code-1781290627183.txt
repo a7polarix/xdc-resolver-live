@@ -1,0 +1,19 @@
+[ Joueur résout l'énigme dans master.html ]
+                    │
+                    ▼
+[ Génération d'une Preuve Cryptographique (Hash de la solution) ]
+                    │
+                    ▼
+[ Le Joueur envoie la transaction au Smart Contract du SEM ]
+  --> Il paie le gaz XDC.
+                    │
+                    ▼
+[ Le Smart Contract vérifie le Hash ]
+                    │
+    ┌───────────────┴───────────────┐
+    ▼                               ▼
+[ VALIDE ]                      [ INVALIDE ]
+Le contrat exécute :            La transaction échoue.
+- Mint automatique du           Le joueur perd ses PV
+  sous-domaine au joueur.       à cause de la Peur.
+- Émission d'un Event EVM.

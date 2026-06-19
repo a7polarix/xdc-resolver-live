@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleurs de Lys – Reçu de caisse</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding: 1rem; height: 100vh; overflow: hidden; transition: background 0.3s; }
+        body.theme-dark { background: #000000; color: #e0e0e0; }
+        body.theme-light { background: #eef2f5; color: #1e2a3a; }
+        body.theme-custom { }
+        .main-layout { display: flex; gap: 2rem; max-width: 1300px; margin: 0 auto; height: calc(100vh - 2rem); }
+        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .header-card { border-radius: 24px; padding: 1.2rem 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+        body.theme-light .header-card { background: #fff; border: 1px solid #e4e9ef; }
+        body.theme-dark .header-card { background: #000; border: 1px solid #333; }
+        body.theme-custom .header-card { background: var(--custom-card-bg, #fff); border: 1px solid var(--custom-border, #e4e9ef); }
+        .scrollable-sections { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; padding-right: 0.5rem; }
+        .side-panel { width: 360px; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; }
+        .card { border-radius: 24px; padding: 1.2rem; }
+        body.theme-light .card { background: #ffffff; border: 1px solid #e4e9ef; }
+        body.theme-dark .card { background: #111; border: 1px solid #333; }
+        body.theme-custom .card { background: var(--custom-card-bg, #fff); border: 1px solid var(--custom-border, #e4e9ef); }
+        body.theme-light input, body.theme-light select, body.theme-light .status, body.theme-light .invoice, body.theme-light .tx-log-item, body.theme-light .url-bar, body.theme-light .media-content, body.theme-light .chat-container, body.theme-light .map-container { background: #fff; border-color: #cfdde6; color: #1e2a3a; }
+        body.theme-dark input, body.theme-dark select, body.theme-dark .status, body.theme-dark .invoice, body.theme-dark .tx-log-item, body.theme-dark .url-bar, body.theme-dark .media-content, body.theme-dark .chat-container, body.theme-dark .map-container { background: #1a1a1a; border-color: #333; color: #e0e0e0; }
+        body.theme-custom input, body.theme-custom select, body.theme-custom .status, body.theme-custom .invoice, body.theme-custom .tx-log-item, body.theme-custom .url-bar, body.theme-custom .media-content, body.theme-custom .chat-container, body.theme-custom .map-container { background: var(--custom-input-bg, #fff); border-color: var(--custom-border, #cfdde6); color: var(--custom-text, #1e2a3a); }
+        body.theme-light input:focus, body.theme-light select:focus { border-color: #8ba0b5; }
+        body.theme-dark input:focus, body.theme-dark select:focus { border-color: #888; }
+        body.theme-custom input:focus, body.theme-custom select:focus { border-color: var(--custom-focus, #8ba0b5); }
+        body.theme-light button { background: #e2e8f0; color: #1e2a3a; }
+        body.theme-light button:hover { background: #cbd5e1; }
+        body.theme-dark button { background: #333; color: #e0e0e0; }
+        body.theme-dark button:hover { background: #555; }
+        body.theme-custom button { background: var(--custom-btn-bg, #e2e8f0); color: var(--custom-btn-text, #1e2a3a); }
+        body.theme-custom button:hover { background: var(--custom-btn-hover, #cbd5e1); }
+        body.theme-light .donate-line { background: #f4f6fa; }
+        body.theme-light .donate-line input { background: white; color: #1e2a3a; }
+        body.theme-dark .donate-line { background: #1a1a1a; border: 1px solid #333; }
+        body.theme-dark .donate-line input { background: #222; color: #e0e0e0; }
+        body.theme-custom .donate-line { background: var(--custom-donate-bg, #f4f6fa); border: 1px solid var(--custom-border, #e4e9ef); }
+        body.theme-custom .donate-line input { background: var(--custom-input-bg, #fff); color: var(--custom-text, #1e2a3a); }
+        body.theme-light .media-tab-big { background: #e8ecf1; border-color: #cfdde6; color: #3a4a5a; }
+        body.theme-light .media-tab-big.active { background: #ffffff; color: #1e2a3a; font-weight: 800; }
+        body.theme-dark .media-tab-big { background: #1a1a1a; border-color: #444; color: #aaa; }
+        body.theme-dark .media-tab-big.active { background: #111; color: #fff; font-weight: 800; border-color: #666; }
+        body.theme-custom .media-tab-big { background: var(--custom-tab-bg, #e8ecf1); border-color: var(--custom-border, #cfdde6); color: var(--custom-text, #3a4a5a); }
+        body.theme-custom .media-tab-big.active { background: var(--custom-card-bg, #fff); color: var(--custom-text, #1e2a3a); font-weight: 800; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
+        body.theme-light h1 { background: linear-gradient(135deg, #1e2a3a, #2c3e4e); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        body.theme-dark h1 { background: linear-gradient(135deg, #c0c0c0, #ffffff); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        body.theme-custom h1 { background: linear-gradient(135deg, var(--custom-text, #1e2a3a), var(--custom-text, #2c3e4e)); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        h3 { font-size: 0.9rem; font-weight: 700; margin: 0; color: inherit; }
+        .sub { font-size: 0.7rem; margin-top: 0.2rem; color: #5c6f87; }
+        body.theme-dark .sub { color: #999; }
+        body.theme-custom .sub { color: var(--custom-text, #5c6f87); }
+        .donate-line { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0.8rem; border-radius: 48px; }
+        .donate-line span { font-weight: 500; color: #1e2a3a; }
+        body.theme-dark .donate-line span { color: #e0e0e0; }
+        .donate-line input { width: 90px; padding: 0.4rem 0.6rem; border-radius: 40px; font-size: 0.85rem; text-align: center; }
+        .donate-line button { border: none; padding: 0.4rem 1rem; border-radius: 40px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+        .inline-status { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        button { border: none; padding: 0.5rem 1.2rem; border-radius: 40px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; }
+        button:active { transform: scale(0.97); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.primary { background: #2c3e4e; color: white; }
+        button.primary:hover { background: #1e2a3a; }
+        button.ready { background: #38a169 !important; color: white !important; font-weight: 700; }
+        .status { padding: 0.5rem 1rem; border-radius: 40px; font-size: 0.8rem; word-break: break-all; font-weight: 500; border: 1px solid; }
+        body.theme-light .status { border-color: #e4e9ef; background: #f4f6fa; }
+        .row { display: flex; gap: 1rem; margin: 1rem 0; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 160px; }
+        label { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; color: #1e2a3a; }
+        body.theme-dark label { color: #e0e0e0; }
+        body.theme-custom label { color: var(--custom-text, #1e2a3a); }
+        input, select { width: 100%; padding: 0.7rem 0.9rem; border-radius: 48px; border: 1px solid; font-size: 0.85rem; font-weight: 500; transition: border 0.2s; }
+        small { font-size: 0.7rem; display: block; margin-top: 0.25rem; color: #5c6f87; }
+        body.theme-dark small { color: #999; }
+        .invoice { border-radius: 20px; padding: 1rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-word; border: 1px solid; margin-top: 1rem; }
+        .invoice-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
+        .invoice-actions button { font-size: 0.7rem; padding: 0.3rem 0.8rem; font-weight: 600; }
+        .hash-link { margin-top: 0.6rem; font-size: 0.7rem; }
+        footer { text-align: center; font-size: 0.7rem; padding: 0.5rem; color: #8ba0b5; }
+        .qr-code-img { margin-top: 1rem; text-align: center; }
+        .qr-code-img img { width: 150px; height: 150px; border: 1px solid #ddd; padding: 5px; background: white; }
+        .config-row { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.8rem; align-items: center; }
+        .config-row input, .config-row select { width: auto; flex: 1; min-width: 150px; font-weight: 500; }
+        .config-row label { width: auto; min-width: 120px; margin-bottom: 0; }
+        .inline-value { font-weight: 700; padding: 0.3rem 0.6rem; border-radius: 20px; border: 1px solid; color: #1e2a3a; }
+        body.theme-dark .inline-value { color: #e0e0e0; }
+        body.theme-light .inline-value { background: #f4f6fa; border-color: #e4e9ef; }
+        body.theme-dark .inline-value { background: #1a1a1a; border-color: #333; }
+        body.theme-custom .inline-value { background: var(--custom-input-bg, #f4f6fa); border-color: var(--custom-border, #e4e9ef); }
+        .network-badge { display: inline-block; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.7rem; font-weight: 700; margin-left: 0.5rem; }
+        .network-badge.xdc { background: #e8f0fe; color: #1e3a5f; }
+        .network-badge.eth { background: #e8e0fe; color: #3a1e5f; }
+        .network-badge.sepolia { background: #fef3c7; color: #92400e; }
+        .tx-log-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 250px; overflow-y: auto; }
+        .tx-log-item { border-radius: 12px; padding: 0.6rem 0.8rem; border: 1px solid; font-size: 0.7rem; }
+        .tx-log-item.outgoing { border-left: 4px solid #2b6cb0; }
+        .tx-log-item.incoming { border-left: 4px solid #38a169; }
+        .tx-log-item strong { font-size: 0.75rem; font-weight: 700; }
+        .tx-log-item .tx-date { font-size: 0.6rem; font-weight: 500; }
+        .tx-log-item .tx-link { font-size: 0.6rem; text-decoration: none; }
+        .tx-log-footer { margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
+        .tx-log-footer button { font-size: 0.65rem; padding: 0.3rem 0.7rem; font-weight: 600; }
+        .map-container { height: 200px; border-radius: 16px; overflow: hidden; border: 1px solid; }
+        .media-tab-row { display: flex; gap: 0; margin-bottom: 0; }
+        .media-tab-big { flex: 1; text-align: center; padding: 0.5rem 0.2rem; cursor: pointer; font-size: 0.7rem; font-weight: 700; transition: all 0.2s; border: 1px solid; border-bottom: none; border-radius: 12px 12px 0 0; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-content { border: 1px solid; border-top: none; border-radius: 0 0 16px 16px; overflow: hidden; min-height: 250px; position: relative; }
+        .media-content iframe { width: 100%; height: 250px; border: none; }
+        .media-content video { width: 100%; max-height: 250px; border: none; }
+        .media-content audio { width: 100%; border: none; margin-top: 0.5rem; }
+        .url-bar { display: flex; gap: 0.3rem; padding: 0.4rem; border-bottom: 1px solid; }
+        .url-bar input { flex: 1; padding: 0.3rem 0.6rem; border-radius: 20px; border: 1px solid; font-size: 0.7rem; }
+        .url-bar button { padding: 0.3rem 0.6rem; font-size: 0.65rem; }
+        .fullscreen-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 8px; padding: 0.2rem 0.5rem; font-size: 0.6rem; cursor: pointer; z-index: 10; }
+        .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .fullscreen-overlay iframe, .fullscreen-overlay video { width: 90vw; height: 90vh; border: none; border-radius: 12px; }
+        .fullscreen-overlay .close-fs { position: absolute; top: 1rem; right: 1rem; background: white; color: black; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5rem; cursor: pointer; z-index: 10; }
+        .chat-container { border: 1px solid #cfdde6; border-radius: 16px; overflow: hidden; position: relative; min-height: 150px; background: #fff; }
+        .chat-container iframe { width: 100%; height: 150px; border: none; }
+        .chat-url-row { display: flex; gap: 0.3rem; padding: 0.4rem; background: #f4f6fa; border-bottom: 1px solid #e4e9ef; }
+        .chat-url-row input { flex: 1; padding: 0.3rem 0.6rem; border-radius: 20px; border: 1px solid #cfdde6; font-size: 0.7rem; background: #fff; color: #1e2a3a; }
+        .chat-url-row button { padding: 0.3rem 0.6rem; font-size: 0.65rem; background: #e2e8f0; color: #1e2a3a; }
+        .collapsible-header { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; padding: 0; margin-bottom: 1rem; }
+        .collapsible-header::after { content: '▼'; font-size: 0.7rem; transition: transform 0.2s; margin-left: 0.5rem; }
+        .collapsible-header.collapsed::after { transform: rotate(-90deg); }
+        .collapsible-body { overflow: hidden; transition: max-height 0.3s ease; max-height: 2000px; }
+        .collapsible-body.collapsed { max-height: 0 !important; margin: 0 !important; padding: 0 !important; opacity: 0; }
+        .radio-controls { display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; flex-wrap: wrap; }
+        .radio-controls select, .radio-controls button { font-size: 0.75rem; padding: 0.4rem 0.7rem; }
+        .radio-controls button { min-width: 44px; min-height: 44px; }
+        .local-file-row { display: flex; gap: 0.5rem; align-items: center; padding: 0.5rem; }
+        .local-file-row input { font-size: 0.7rem; }
+        .local-file-row button { min-width: 44px; min-height: 44px; font-size: 0.75rem; }
+        .theme-switcher { display: flex; gap: 0.3rem; margin-left: auto; align-items: center; }
+        .theme-btn { padding: 0.3rem 0.6rem; border-radius: 20px; font-size: 0.6rem; cursor: pointer; border: 1px solid; background: transparent; color: #1e2a3a; font-weight: 600; }
+        body.theme-dark .theme-btn { color: #e0e0e0; }
+        body.theme-light .theme-btn { border-color: #cfdde6; }
+        body.theme-dark .theme-btn { border-color: #555; }
+        body.theme-custom .theme-btn { border-color: var(--custom-border, #cfdde6); color: var(--custom-text, #1e2a3a); }
+        .theme-btn.active { font-weight: 700; }
+        body.theme-light .theme-btn.active { background: #2c3e4e; color: white; border-color: #2c3e4e; }
+        body.theme-dark .theme-btn.active { background: #555; color: white; border-color: #555; }
+        body.theme-custom .theme-btn.active { background: var(--custom-btn-bg, #2c3e4e); color: var(--custom-btn-text, white); border-color: var(--custom-btn-bg, #2c3e4e); }
+        .color-picker-panel { position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: #fff; border: 2px solid #2c3e4e; border-radius: 16px; padding: 1rem; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.2); display: none; min-width: 280px; color: #1e2a3a; }
+        .color-picker-panel.show { display: block; }
+        .color-picker-panel label { font-size: 0.7rem; font-weight: 700; display: block; margin-bottom: 0.2rem; color: #1e2a3a; }
+        .color-picker-panel input[type="color"] { width: 100%; height: 36px; border: 1px solid #cfdde6; border-radius: 8px; cursor: pointer; padding: 2px; margin-bottom: 0.5rem; background: #fff; }
+        .color-picker-panel input[type="file"] { width: 100%; font-size: 0.7rem; margin-bottom: 0.5rem; color: #1e2a3a; }
+        .color-picker-panel button { font-size: 0.7rem; padding: 0.4rem 0.8rem; margin-top: 0.3rem; background: #e2e8f0; color: #1e2a3a; }
+        .color-picker-panel button.primary { background: #2c3e4e; color: white; }
+        .color-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+        .color-row label { min-width: 80px; margin-bottom: 0; color: #1e2a3a; }
+        .theme-switcher-wrapper { position: relative; }
+        .market-type-selector { display: flex; gap: 0.3rem; padding: 0.3rem; background: #f4f6fa; border-bottom: 1px solid #e4e9ef; }
+        .market-type-selector button { font-size: 0.6rem; padding: 0.2rem 0.5rem; background: #e2e8f0; color: #1e2a3a; }
+        .market-type-selector button.active { background: #2c3e4e; color: white; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.16.0/dist/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="theme-light">
+<div class="main-layout">
+    <div class="main-content">
+        <div class="header-card">
+            <div class="header-flex">
+                <div><h1>🌿 Fleurs de Lys</h1><div class="sub">résolveur .xdc · .rwa · .depin · .eth</div></div>
+                <div class="theme-switcher-wrapper">
+                    <div class="theme-switcher">
+                        <button class="theme-btn active" data-theme="light">☀️ Clair</button>
+                        <button class="theme-btn" data-theme="dark">🌙 Sombre</button>
+                        <button class="theme-btn" data-theme="custom" id="customThemeBtn">🎨 Perso</button>
+                    </div>
+                    <div class="color-picker-panel" id="colorPickerPanel">
+                        <div class="color-row"><label>Fond page</label><input type="color" id="bgColor" value="#eef2f5"></div>
+                        <div class="color-row"><label>Fond carte</label><input type="color" id="cardBgColor" value="#ffffff"></div>
+                        <div class="color-row"><label>Texte</label><input type="color" id="textColor" value="#1e2a3a"></div>
+                        <div class="color-row"><label>Boutons</label><input type="color" id="btnBgColor" value="#e2e8f0"></div>
+                        <div class="color-row"><label>Champs</label><input type="color" id="inputBgColor" value="#ffffff"></div>
+                        <div class="color-row"><label>Bordure</label><input type="color" id="borderColor" value="#cfdde6"></div>
+                        <div class="color-row"><label>Focus</label><input type="color" id="focusColor" value="#8ba0b5"></div>
+                        <label style="color:#1e2a3a;">🖼️ Fond d'écran</label>
+                        <input type="file" id="bgImageFile" accept="image/*">
+                        <button id="resetBgImageBtn" style="background:#e2e8f0;color:#1e2a3a;">Retirer image</button>
+                        <button id="applyCustomBtn" class="primary">Appliquer</button>
+                    </div>
+                </div>
+                <div class="donate-line"><span>💝 don</span><input type="number" id="donateAmount" placeholder="montant" step="any" value="1"><button id="quickDonateBtn">envoyer</button></div>
+            </div>
+            <div class="inline-status">
+                <button id="connectBtn">🔌 connecter</button>
+                <div id="accountInfo" class="status">wallet : non connecté</div>
+                <div id="balanceInfo" class="status">solde : --</div>
+                <select id="networkSelect" style="width:auto;padding:0.4rem 0.8rem;border-radius:40px;font-size:0.75rem;font-weight:600;">
+                    <option value="xdc">🔵 XDC Network</option><option value="eth">🟣 Ethereum</option><option value="sepolia">🟠 Sepolia Testnet</option>
+                </select>
+                <span id="networkBadge" class="network-badge xdc">XDC</span>
+            </div>
+        </div>
+
+        <div class="scrollable-sections">
+            <div class="card"><div class="collapsible-header" data-target="txSection"><h3>✎ Transaction</h3></div>
+                <div class="collapsible-body" id="txSection">
+                    <div class="row"><div class="col"><label>depuis (domaine)</label><input type="text" id="fromDomain" placeholder="ex: fleursdelys.xdc"><small>optionnel</small></div><div class="col"><label>vers (domaine ou adresse)</label><input type="text" id="toDomain" placeholder="ex: gold.xdc"></div></div>
+                    <div class="row"><div class="col"><label>montant</label><input type="number" id="amount" placeholder="montant" step="any"></div><div class="col"><label>devise</label><select id="token"></select></div></div>
+                    <button id="sendBtn" disabled>📤 envoyer</button><div id="txStatus" class="status" style="margin-top:1rem;"></div>
+                </div>
+            </div>
+            <div class="card"><div class="collapsible-header" data-target="sendDomainSection"><h3>📦 Envoyer un domaine</h3></div>
+                <div class="collapsible-body" id="sendDomainSection">
+                    <div class="row"><div class="col"><label>domaine à envoyer</label><input type="text" id="sendDomainName" placeholder="ex: monfils.xdc"></div><div class="col"><label>destinataire (domaine ou adresse 0x)</label><input type="text" id="sendDomainTo" placeholder="ex: ⚜️⚜️⚜️.energy.depin ou 0x..."></div></div>
+                    <button id="sendDomainBtn" disabled>📤 envoyer le domaine</button><div id="sendDomainStatus" class="status" style="margin-top:0.5rem;"></div>
+                </div>
+            </div>
+            <div class="card"><div class="collapsible-header" data-target="invoiceSection"><h3>🧾 Dernière validation</h3></div>
+                <div class="collapsible-body" id="invoiceSection"><div id="donateStatus" class="status"></div><div id="invoiceContainer" class="invoice" style="display:none;"></div>
+                    <div class="invoice-actions" style="margin-top:0.8rem;"><button id="copyJsonBtn" style="display:none;">Copier JSON</button><button id="copyHashBtn" style="display:none;">Copier hash</button><button id="saveClientBtn" style="display:none;">🧾 Reçu client</button><button id="saveComptaBtn" style="display:none;">📑 Reçu comptable</button><button id="saveBothBtn" style="display:none;">📁 Les deux</button></div>
+                </div>
+            </div>
+            <div class="card"><div class="collapsible-header" data-target="hashSection"><h3>🔍 Générer un reçu depuis un hash</h3></div>
+                <div class="collapsible-body" id="hashSection"><input type="text" id="invoiceHash" placeholder="hash de transaction (0x...)" style="margin-bottom:0.5rem;"><button id="verifyHashBtn" style="width:auto;">vérifier le hash</button>
+                    <div style="display:flex;gap:0.8rem;margin-top:1rem;"><input type="text" id="invoiceFrom" placeholder="émetteur (adresse)" readonly><input type="text" id="invoiceTo" placeholder="destinataire (adresse)" readonly></div>
+                    <div style="display:flex;gap:0.8rem;margin-top:0.8rem;"><input type="number" id="invoiceAmount" placeholder="montant" step="any" readonly><select id="invoiceSymbol" disabled></select></div>
+                    <button id="generateInvoiceBtn" style="margin-top:1rem;">générer le reçu</button><div id="manualInvoice" class="invoice" style="display:none;margin-top:1rem;"></div>
+                </div>
+            </div>
+            <div class="card"><div class="collapsible-header" data-target="configSection"><h3>⚙️ Configuration (optionnelle)</h3></div>
+                <div class="collapsible-body" id="configSection">
+                    <div class="config-row"><label>📁 Fichier config (JSON)</label><input type="file" id="configFile" accept=".json" style="width:auto;flex:2;"><button id="loadConfigBtn" style="width:auto;">Charger</button></div>
+                    <div class="config-row"><label>🧾 SIRET / Business reg.</label><input type="text" id="siretField" placeholder="123 456 789 00012"></div>
+                    <div class="config-row"><label>🏷️ TVA (%)</label><input type="number" id="tvaField" placeholder="20" step="any" value="20"></div>
+                    <div class="config-row"><label>🏢 Adresse siège</label><input type="text" id="adresseSiegeField" placeholder="10 Rue de la Paix, Paris"></div>
+                    <div class="config-row"><label>📦 Objet prestation</label><input type="text" id="objetPrestationField" placeholder="Prestation photographique"></div>
+                    <div class="config-row"><label>🔮 Oracle (adresse)</label><input type="text" id="oracleAddressField" placeholder="0x... (vide = défaut)"><button id="testOracleBtn" class="oracle-test">🔍 Tester</button><button id="clearOracleCacheBtn" style="font-size:0.6rem;padding:0.2rem 0.5rem;margin-left:0.3rem;">🗑️</button></div>
+                    <div class="config-row"><label>💶 Devise fiat</label><input type="text" id="fiatCurrencyField" placeholder="USD" value="USD"></div>
+                    <div class="config-row"><label>🏷️ Catégorie personnalisée</label><input type="text" id="categoriePersoField" placeholder="Laissez vide pour auto-détection"></div>
+                    <div class="config-row"><label>⚖️ Régime TVA</label><select id="regimeTvaField"><option value="classique">Classique (TVA collectée)</option><option value="auto_entreprise">Auto-entreprise (TVA non applicable)</option></select></div>
+                    <div class="config-row"><label>📝 Mention TVA (optionnelle)</label><input type="text" id="mentionTvaField" placeholder="TVA non applicable, art. 293B du CGI"></div>
+                    <div class="config-row"><label>💰 Prix oracle actuel</label><span id="oraclePriceDisplay" class="inline-value">Non testé</span></div>
+                    <div class="config-row"><label>💶 Montant TTC estimé</label><span id="ttcEstimateDisplay" class="inline-value">--</span></div>
+                    <small>Les champs ci-dessus sont sauvegardés localement.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card chat-section"><h3 style="margin-bottom:0.5rem;">💬 Chat</h3>
+            <div class="chat-url-row"><input type="text" id="chatUrlInput" placeholder="https://t.me/... ou lien Matrix..."><button id="loadChatUrlBtn">Connecter</button></div>
+            <div class="chat-container" id="chatContainer"><iframe src="about:blank" id="chatIframe"></iframe><button class="fullscreen-btn" id="chatFsBtn">⛶</button></div>
+        </div>
+        <footer>© 2026 FocalZero SAN – résolveur décentralisé</footer>
+    </div>
+
+    <div class="side-panel">
+        <div class="card"><h3>📋 Historique</h3><div class="tx-log-list" id="txLogList"><div style="font-size:0.7rem;text-align:center;padding:1rem;">Aucune transaction</div></div>
+            <div class="tx-log-footer"><small id="txLogCount">0 transaction(s)</small><button id="clearTxLogBtn">🗑️ Clear</button></div>
+        </div>
+        <div class="card" style="padding:0.75rem;"><h3 style="margin-bottom:0.5rem;">🗺️ Emplacement</h3><div id="mapContainer" class="map-container"></div><small id="ipDisplay" style="display:block;margin-top:0.3rem;text-align:center;"></small></div>
+        <div class="card" style="padding:0.75rem;">
+            <div class="media-tab-row">
+                <div class="media-tab-big active" data-tab="bourse">📈 MARCHÉS</div>
+                <div class="media-tab-big" data-tab="x">𝕏 RS</div>
+                <div class="media-tab-big" data-tab="youtube">▶️ VIDÉO</div>
+                <div class="media-tab-big" data-tab="radio">📻 RADIO</div>
+                <div class="media-tab-big" data-tab="local">💻 LOCAL</div>
+            </div>
+            <div class="media-content" id="mediaContent">
+                <div class="market-type-selector" id="marketTypeSelector" style="display:flex;">
+                    <button class="active" data-market="irl">🏛️ IRL</button>
+                    <button data-market="crypto">₿ CRYPTO</button>
+                </div>
+                <div class="url-bar" id="urlBar" style="display:none;"><input type="text" id="mediaUrlInput" placeholder="https://..."><button id="loadMediaUrlBtn">Charger</button></div>
+                <div class="radio-controls" id="radioControls" style="display:none;">
+                    <select id="radioCountry"><option value="">Monde</option></select>
+                    <button id="searchRadioBtn">🔍</button>
+                    <select id="radioStationList" style="flex:1;min-width:120px;"><option value="">-- Choisir --</option></select>
+                    <button id="playRadioBtn">▶️</button>
+                    <button id="stopRadioBtn">⏹️</button>
+                </div>
+                <div class="local-file-row" id="localFileRow" style="display:none;">
+                    <input type="file" id="localMediaFile" accept="audio/*,video/*" style="flex:1;font-size:0.7rem;">
+                    <button id="playLocalBtn">▶️</button>
+                    <button id="stopLocalBtn">⏹️</button>
+                </div>
+                <iframe src="about:blank" id="mediaIframe" style="display:block;"></iframe>
+                <video id="mediaVideo" controls style="display:none;width:100%;max-height:250px;"></video>
+                <audio id="mediaAudio" controls style="display:none;width:100%;"></audio>
+                <button class="fullscreen-btn" id="mediaFsBtn">⛶</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="fullscreen-overlay" id="fsOverlay" style="display:none;"><button class="close-fs" id="closeFsBtn">✕</button><iframe src="about:blank" id="fsIframe" style="display:block;"></iframe><video id="fsVideo" controls style="display:none;width:90vw;height:90vh;"></video></div>
+
+<script>
+    // ==================== THÈMES ====================
+    function applyCustomTheme(themeData = null) {
+        const root = document.documentElement;
+        const data = themeData || JSON.parse(localStorage.getItem('fl_custom_theme') || '{}');
+        if (data.bgColor) { document.body.style.background = data.bgColor; root.style.setProperty('--custom-bg', data.bgColor); }
+        if (data.cardBgColor) { root.style.setProperty('--custom-card-bg', data.cardBgColor); }
+        if (data.textColor) { root.style.setProperty('--custom-text', data.textColor); }
+        if (data.btnBgColor) { root.style.setProperty('--custom-btn-bg', data.btnBgColor); }
+        if (data.inputBgColor) { root.style.setProperty('--custom-input-bg', data.inputBgColor); }
+        if (data.borderColor) { root.style.setProperty('--custom-border', data.borderColor); }
+        if (data.focusColor) { root.style.setProperty('--custom-focus', data.focusColor); }
+        if (data.bgImage) { document.body.style.backgroundImage = `url(${data.bgImage})`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundAttachment = 'fixed'; }
+        else { document.body.style.backgroundImage = ''; document.body.style.backgroundSize = ''; document.body.style.backgroundAttachment = ''; }
+        root.style.setProperty('--custom-donate-bg', data.cardBgColor || '#f4f6fa');
+        root.style.setProperty('--custom-tab-bg', data.cardBgColor ? data.cardBgColor + 'dd' : '#e8ecf1');
+        root.style.setProperty('--custom-btn-text', data.textColor || '#1e2a3a');
+        root.style.setProperty('--custom-btn-hover', data.btnBgColor || '#cbd5e1');
+    }
+
+    function loadCustomTheme() {
+        const saved = localStorage.getItem('fl_custom_theme');
+        if (saved) {
+            const data = JSON.parse(saved);
+            document.getElementById('bgColor').value = data.bgColor || '#eef2f5';
+            document.getElementById('cardBgColor').value = data.cardBgColor || '#ffffff';
+            document.getElementById('textColor').value = data.textColor || '#1e2a3a';
+            document.getElementById('btnBgColor').value = data.btnBgColor || '#e2e8f0';
+            document.getElementById('inputBgColor').value = data.inputBgColor || '#ffffff';
+            document.getElementById('borderColor').value = data.borderColor || '#cfdde6';
+            document.getElementById('focusColor').value = data.focusColor || '#8ba0b5';
+            return data;
+        }
+        return null;
+    }
+
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.dataset.theme === 'custom') {
+                const panel = document.getElementById('colorPickerPanel');
+                panel.classList.toggle('show');
+                return;
+            }
+            document.getElementById('colorPickerPanel').classList.remove('show');
+            document.body.className = 'theme-' + btn.dataset.theme;
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            localStorage.setItem('fl_theme', btn.dataset.theme);
+            document.body.style.backgroundImage = '';
+            document.body.style.backgroundSize = '';
+            document.body.style.backgroundAttachment = '';
+        });
+    });
+
+    document.getElementById('applyCustomBtn').addEventListener('click', () => {
+        const data = {
+            bgColor: document.getElementById('bgColor').value,
+            cardBgColor: document.getElementById('cardBgColor').value,
+            textColor: document.getElementById('textColor').value,
+            btnBgColor: document.getElementById('btnBgColor').value,
+            inputBgColor: document.getElementById('inputBgColor').value,
+            borderColor: document.getElementById('borderColor').value,
+            focusColor: document.getElementById('focusColor').value,
+            bgImage: localStorage.getItem('fl_bg_image') || null
+        };
+        localStorage.setItem('fl_custom_theme', JSON.stringify(data));
+        document.body.className = 'theme-custom';
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('customThemeBtn').classList.add('active');
+        localStorage.setItem('fl_theme', 'custom');
+        applyCustomTheme(data);
+        document.getElementById('colorPickerPanel').classList.remove('show');
+    });
+
+    document.getElementById('bgImageFile').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            localStorage.setItem('fl_bg_image', ev.target.result);
+            document.body.style.backgroundImage = `url(${ev.target.result})`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundAttachment = 'fixed';
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('resetBgImageBtn').addEventListener('click', () => {
+        localStorage.removeItem('fl_bg_image');
+        document.body.style.backgroundImage = '';
+        document.body.style.backgroundSize = '';
+        document.body.style.backgroundAttachment = '';
+    });
+
+    const savedTheme = localStorage.getItem('fl_theme') || 'light';
+    if (savedTheme === 'custom') {
+        const customData = loadCustomTheme();
+        document.body.className = 'theme-custom';
+        document.querySelectorAll('.theme-btn').forEach(b => { b.classList.remove('active'); if (b.dataset.theme === 'custom') b.classList.add('active'); });
+        if (customData) applyCustomTheme(customData);
+    } else {
+        document.body.className = 'theme-' + savedTheme;
+        document.querySelectorAll('.theme-btn').forEach(b => { b.classList.remove('active'); if (b.dataset.theme === savedTheme) b.classList.add('active'); });
+    }
+    const savedBgImage = localStorage.getItem('fl_bg_image');
+    if (savedBgImage && savedTheme === 'custom') {
+        document.body.style.backgroundImage = `url(${savedBgImage})`;
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundAttachment = 'fixed';
+    }
+    loadCustomTheme();
+
+    (function(){const L=window.L;const ethers=window.ethers;})();
+
+    document.querySelectorAll('.collapsible-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const target = document.getElementById(header.dataset.target);
+            header.classList.toggle('collapsed');
+            target.classList.toggle('collapsed');
+        });
+    });
+
+    // ==================== CARTE ====================
+    let map,marker,mapInitialized=false;
+    function initBaseMap(){if(!mapInitialized){const isDark = document.body.classList.contains('theme-dark');const tileUrl = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';map=L.map('mapContainer',{zoomControl:false,attributionControl:false}).setView([20,0],2);L.tileLayer(tileUrl,{subdomains:'abcd',maxZoom:19}).addTo(map);mapInitialized=true;}}
+    function showLocation(lat,lon,city,country){if(!mapInitialized)initBaseMap();if(marker)map.removeLayer(marker);marker=L.marker([lat,lon]).addTo(map).bindPopup(`${city}, ${country}`).openPopup();map.setView([lat,lon],8);document.getElementById('ipDisplay').textContent=`${city}, ${country}`;}
+    async function detectAndShowLocation(){try{const r=await fetch('https://ipapi.co/json/');const d=await r.json();if(d.latitude&&d.longitude)showLocation(d.latitude,d.longitude,d.city||'',d.country_name||'');}catch(e){}}
+    initBaseMap();
+
+    // ==================== RÉSEAUX ====================
+    const NETWORKS={xdc:{name:'XDC Network',chainId:'0x32',rpc:'https://rpc.xdcrpc.com',explorer:'https://xdcscan.com',tokens:[{value:'XDC',label:'XDC (natif)',address:null,decimals:18},{value:'USDC',label:'USDC',address:'0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1',decimals:6},{value:'CGO',label:'CGO (Comtech Gold)',address:'0x8f9920283470f52128bf11b0c14e798be704fd15',decimals:18},{value:'SRX',label:'SRX (StorX)',address:'0x5d5f074837f5d4618b3916ba74de1bf9662a3fed',decimals:18},{value:'PLI',label:'PLI (Plugin)',address:'0xff7412ea7c8445c46a8254dfb557ac1e48094391',decimals:18},{value:'LBT',label:'LBT (Law Blocks)',address:'0x05940b2df33d6371201e7ae099ced4c363855dfe',decimals:18},{value:'FXD',label:'FXD (Fathom Dollar)',address:'0x49d3f7543335cf38Fa10889CCFF10207e22110B5',decimals:18}],contractAddr:'0x295a7aB79368187a6CD03c464cfaAb04d799784E',oracleDefault:'0x0261911548dc291BDf6287e73DFf9B1BF8B08fE8'},eth:{name:'Ethereum',chainId:'0x1',rpc:'https://ethereum-rpc.publicnode.com',explorer:'https://etherscan.io',tokens:[{value:'ETH',label:'ETH (natif)',address:null,decimals:18},{value:'USDC',label:'USDC',address:'0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',decimals:6},{value:'USDT',label:'USDT',address:'0xdAC17F958D2ee523a2206206994597C13D831ec7',decimals:6}],contractAddr:null,oracleDefault:'0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'},sepolia:{name:'Sepolia Testnet',chainId:'0xaa36a7',rpc:'https://rpc.sepolia.org',explorer:'https://sepolia.etherscan.io',tokens:[{value:'ETH',label:'SepoliaETH (test)',address:null,decimals:18},{value:'USDC',label:'USDC (test)',address:'0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',decimals:6}],contractAddr:null,oracleDefault:null}};
+    let currentNetwork='xdc';
+    function getNetwork(){return NETWORKS[currentNetwork];}
+    function getTokenList(){return getNetwork().tokens;}
+    function getRpcUrl(){return getNetwork().rpc;}
+    function getExplorerUrl(hash){return `${getNetwork().explorer}/tx/${hash}`;}
+    function populateTokens(){const s=document.getElementById('token'),s2=document.getElementById('invoiceSymbol'),tokens=getTokenList();s.innerHTML=tokens.map(t=>`<option value="${t.value}">${t.label}</option>`).join('');s2.innerHTML=tokens.map(t=>`<option>${t.value}</option>`).join('');}
+    function getTokenAddress(symbol){const t=getTokenList().find(t=>t.value===symbol);return t?t.address:null;}
+    function getTokenDecimals(symbol){const t=getTokenList().find(t=>t.value===symbol);return t?t.decimals:18;}
+    document.getElementById('networkSelect').addEventListener('change',async(e)=>{currentNetwork=e.target.value;const net=getNetwork();document.getElementById('networkBadge').textContent=net.name.split(' ')[0];document.getElementById('networkBadge').className='network-badge '+currentNetwork;populateTokens();if(window._signer){try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:net.chainId}]});}catch(err){if(err.code===4902){await window.ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:net.chainId,chainName:net.name,rpcUrls:[net.rpc],nativeCurrency:{symbol:currentNetwork==='xdc'?'XDC':'ETH',decimals:18},blockExplorerUrls:[net.explorer]}]});}}}updateTTCEstimate();if(net.oracleDefault)testOracle(net.oracleDefault);else currentOraclePrice=null;});
+    populateTokens();
+
+    const LOCAL_CATEGORIES={"crudeoil.rwa":"Énergie & Ressources","compute.depin":"Calcul & IA","fleursdelys.xdc":"Lore & Mythes","boulangerie.xdc":"Agriculture & Alimentation"};
+    const I18N={fr:{copy_json:'Copier JSON',copy_hash:'Copier hash',download_receipt:'Télécharger le reçu (HTML)',view_on_explorer:'Voir sur Explorer',json_copied:'JSON copié',hash_copied:'Hash copié',receipt_downloaded:'Reçu HTML téléchargé.'},en:{copy_json:'Copy JSON',copy_hash:'Copy hash',download_receipt:'Download receipt (HTML)',view_on_explorer:'View on Explorer',json_copied:'JSON copied',hash_copied:'Hash copied',receipt_downloaded:'Receipt HTML downloaded.'}};
+    function getBrowserLanguage(){return(navigator.language||'fr').startsWith('fr')?'fr':'en';}
+    const browserLang=getBrowserLanguage();const langData=I18N[browserLang];function t(k){return langData[k]||k;}
+
+    // ==================== STOCKAGE LOCAL ====================
+    function saveLocalConfig(){localStorage.setItem('fl_siret',document.getElementById('siretField').value.trim());localStorage.setItem('fl_tva',document.getElementById('tvaField').value);localStorage.setItem('fl_adresse_siege',document.getElementById('adresseSiegeField').value);localStorage.setItem('fl_objet_prestation',document.getElementById('objetPrestationField').value);localStorage.setItem('fl_fiat_currency',document.getElementById('fiatCurrencyField').value.trim());localStorage.setItem('fl_categorie_perso',document.getElementById('categoriePersoField').value.trim());localStorage.setItem('fl_regime_tva',document.getElementById('regimeTvaField').value);localStorage.setItem('fl_mention_tva',document.getElementById('mentionTvaField').value);}
+    function loadLocalConfig(){document.getElementById('siretField').value=localStorage.getItem('fl_siret')||'';document.getElementById('tvaField').value=localStorage.getItem('fl_tva')||'20';document.getElementById('adresseSiegeField').value=localStorage.getItem('fl_adresse_siege')||'';document.getElementById('objetPrestationField').value=localStorage.getItem('fl_objet_prestation')||'';document.getElementById('fiatCurrencyField').value=localStorage.getItem('fl_fiat_currency')||'USD';document.getElementById('categoriePersoField').value=localStorage.getItem('fl_categorie_perso')||'';document.getElementById('regimeTvaField').value=localStorage.getItem('fl_regime_tva')||'classique';document.getElementById('mentionTvaField').value=localStorage.getItem('fl_mention_tva')||'';}
+    ['siretField','tvaField','adresseSiegeField','objetPrestationField','fiatCurrencyField','categoriePersoField','regimeTvaField','mentionTvaField'].forEach(id=>document.getElementById(id).addEventListener(id==='regimeTvaField'?'change':'input',saveLocalConfig));loadLocalConfig();
+
+    const TX_LOG_KEY='fl_tx_log';
+    function getTxLog(){try{return JSON.parse(localStorage.getItem(TX_LOG_KEY)||'[]');}catch(e){return[];}}
+    function saveTxLog(log){localStorage.setItem(TX_LOG_KEY,JSON.stringify(log));}
+    function addTxEntry(entry){const log=getTxLog();log.push({...entry,date:Date.now()});if(log.length>100)log.shift();saveTxLog(log);renderTxLog();}
+    function clearTxLog(){localStorage.removeItem(TX_LOG_KEY);renderTxLog();}
+    function renderTxLog(){const list=document.getElementById('txLogList'),count=document.getElementById('txLogCount'),log=getTxLog();count.textContent=log.length+' transaction(s)';if(log.length===0){list.innerHTML='<div style="font-size:0.7rem;text-align:center;padding:1rem;">Aucune transaction</div>';return;}list.innerHTML=log.slice().reverse().map(e=>{const cls=e.type==='outgoing'?'outgoing':'incoming',d=new Date(e.date).toLocaleString();return`<div class="tx-log-item ${cls}"><strong>${e.type==='outgoing'?'📤 Sortant':'📥 Entrant'}</strong> ${e.amount} ${e.token}<br><small>${e.from} → ${e.to}</small><br><small class="tx-date">${d}</small><br><a href="${getExplorerUrl(e.hash||'')}" target="_blank" class="tx-link">🔗 Voir sur l'explorer</a></div>`;}).join('');}
+    document.getElementById('clearTxLogBtn').addEventListener('click',clearTxLog);renderTxLog();
+
+    // ==================== ORACLE ====================
+    let currentOraclePrice=null;
+    async function testOracle(oracleAddress){const addr=oracleAddress&&oracleAddress.trim()?oracleAddress.trim():getNetwork().oracleDefault;if(!addr||!addr.startsWith('0x'))return null;try{const p=new ethers.JsonRpcProvider(getRpcUrl());const c=new ethers.Contract(addr,["function latestAnswer() view returns (int256)","function decimals() view returns (uint8)"],p);const dec=await c.decimals();const raw=await c.latestAnswer();const price=Number(raw)/(10**Number(dec));currentOraclePrice=price;const fiat=document.getElementById('fiatCurrencyField').value.trim()||'USD';document.getElementById('oraclePriceDisplay').innerHTML=`${price.toFixed(8)} ${fiat}/${currentNetwork==='xdc'?'XDC':'ETH'}`;return price;}catch(e){document.getElementById('oraclePriceDisplay').innerHTML='Erreur';return null;}}
+    document.getElementById('testOracleBtn').addEventListener('click',async()=>{await testOracle(document.getElementById('oracleAddressField').value.trim());});
+    document.getElementById('clearOracleCacheBtn').addEventListener('click',()=>{currentOraclePrice=null;document.getElementById('oraclePriceDisplay').innerHTML='Cache vidé';document.getElementById('ttcEstimateDisplay').innerHTML='--';});
+
+    async function updateTTCEstimate(){const amt=parseFloat(document.getElementById('amount').value)||0;let price=currentOraclePrice;if(!price||isNaN(amt)||amt<=0){document.getElementById('ttcEstimateDisplay').innerHTML='--';return;}const tva=parseFloat(document.getElementById('tvaField').value)||0;const regime=document.getElementById('regimeTvaField').value;const effTva=regime==='auto_entreprise'?0:tva;const ttc=amt*price*(1+effTva/100);const fiat=document.getElementById('fiatCurrencyField').value||'USD';document.getElementById('ttcEstimateDisplay').innerHTML=`${ttc.toFixed(4)} ${fiat}`;}
+    document.getElementById('amount').addEventListener('input',updateTTCEstimate);document.getElementById('tvaField').addEventListener('input',updateTTCEstimate);document.getElementById('regimeTvaField').addEventListener('change',updateTTCEstimate);setInterval(updateTTCEstimate,30000);
+
+    document.getElementById('loadConfigBtn').addEventListener('click',()=>{const file=document.getElementById('configFile').files[0];if(!file)return alert("Sélectionnez un fichier JSON");const reader=new FileReader();reader.onload=(e)=>{try{const config=JSON.parse(e.target.result);if(config.siret)document.getElementById('siretField').value=config.siret;if(config.tva!==undefined)document.getElementById('tvaField').value=config.tva;if(config.adresse_siege)document.getElementById('adresseSiegeField').value=config.adresse_siege;if(config.objet_prestation)document.getElementById('objetPrestationField').value=config.objet_prestation;if(config.fiatCurrency)document.getElementById('fiatCurrencyField').value=config.fiatCurrency;if(config.categorie_personnalisee)document.getElementById('categoriePersoField').value=config.categorie_personnalisee;if(config.regime_tva)document.getElementById('regimeTvaField').value=config.regime_tva;if(config.mention_tva)document.getElementById('mentionTvaField').value=config.mention_tva;saveLocalConfig();alert("Configuration chargée");updateTTCEstimate();if(getNetwork().oracleDefault)testOracle(getNetwork().oracleDefault);}catch(e){alert("Erreur parsing JSON");}};reader.readAsText(file);});
+
+    // ==================== MEDIA ENGINE ====================
+    const mediaIframe=document.getElementById('mediaIframe');
+    const mediaVideo=document.getElementById('mediaVideo');
+    const mediaAudio=document.getElementById('mediaAudio');
+    const mediaFsBtn=document.getElementById('mediaFsBtn');
+    const fsOverlay=document.getElementById('fsOverlay');
+    const fsIframe=document.getElementById('fsIframe');
+    const fsVideo=document.getElementById('fsVideo');
+    const closeFsBtn=document.getElementById('closeFsBtn');
+    const urlBar=document.getElementById('urlBar');
+    const mediaUrlInput=document.getElementById('mediaUrlInput');
+    const loadMediaUrlBtn=document.getElementById('loadMediaUrlBtn');
+    const radioControls=document.getElementById('radioControls');
+    const radioCountry=document.getElementById('radioCountry');
+    const radioStationList=document.getElementById('radioStationList');
+    const searchRadioBtn=document.getElementById('searchRadioBtn');
+    const playRadioBtn=document.getElementById('playRadioBtn');
+    const stopRadioBtn=document.getElementById('stopRadioBtn');
+    const localFileRow=document.getElementById('localFileRow');
+    const localMediaFile=document.getElementById('localMediaFile');
+    const playLocalBtn=document.getElementById('playLocalBtn');
+    const stopLocalBtn=document.getElementById('stopLocalBtn');
+    const marketTypeSelector=document.getElementById('marketTypeSelector');
+
+    let currentMediaType='bourse';
+    let currentMarket='irl';
+    function hideAllMedia(){mediaIframe.style.display='none';mediaVideo.style.display='none';mediaAudio.style.display='none';urlBar.style.display='none';radioControls.style.display='none';localFileRow.style.display='none';marketTypeSelector.style.display='none';mediaVideo.src='';mediaAudio.src='';mediaAudio.pause();mediaVideo.pause();}
+    function showMediaType(type){
+        hideAllMedia();
+        currentMediaType=type;
+        const isDark = document.body.classList.contains('theme-dark');
+        if(type==='bourse'){marketTypeSelector.style.display='flex';mediaIframe.style.display='block';updateBourseIframe();}
+        else if(type==='x'){
+            urlBar.style.display='flex';
+            mediaIframe.style.display='none';
+            loadMediaUrlBtn.onclick=()=>{
+                let url=mediaUrlInput.value.trim();
+                if(!url) url='https://x.com';
+                window.open(url, '_blank');
+            };
+            mediaUrlInput.value='https://x.com';
+        }
+        else if(type==='youtube'){
+            urlBar.style.display='flex';
+            mediaIframe.style.display='block';
+            mediaIframe.src='https://www.youtube.com/embed/dQw4w9WgXcQ';
+            loadMediaUrlBtn.onclick=()=>{
+                let url=mediaUrlInput.value.trim();
+                if(url){
+                    const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+                    if (videoId && videoId[1]) {
+                        url = `https://www.youtube.com/embed/${videoId[1]}`;
+                    }
+                    mediaIframe.src=url;
+                    mediaIframe.style.display='block';
+                }
+            };
+            mediaUrlInput.value='https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+        }
+        else if(type==='radio'){radioControls.style.display='flex';mediaAudio.style.display='block';loadRadioCountries();}
+        else if(type==='local'){localFileRow.style.display='flex';}
+    }
+    function updateBourseIframe(){
+        const isDark = document.body.classList.contains('theme-dark');
+        if(currentMarket==='irl'){
+            mediaIframe.src=`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_widget&symbol=NASDAQ%3AAMD&interval=5&hidesidetoolbar=1&hidetoptoolbar=1&symboledit=0&editablewatchlist=0&details=0&studies=[]&theme=${isDark?'dark':'light'}&style=1&timezone=exchange&withdateranges=1&showpopupbutton=0&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=fr`;
+        } else {
+            mediaIframe.src=`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_widget&symbol=BINANCE%3ABTCUSDT&interval=5&hidesidetoolbar=1&hidetoptoolbar=1&symboledit=0&editablewatchlist=0&details=0&studies=[]&theme=${isDark?'dark':'light'}&style=1&timezone=exchange&withdateranges=1&showpopupbutton=0&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=fr`;
+        }
+    }
+    showMediaType('bourse');
+
+    document.querySelectorAll('.media-tab-big').forEach(tab=>{tab.addEventListener('click',()=>{document.querySelectorAll('.media-tab-big').forEach(t=>t.classList.remove('active'));tab.classList.add('active');showMediaType(tab.dataset.tab);});});
+    document.querySelectorAll('.market-type-selector button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.market-type-selector button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentMarket=btn.dataset.market;updateBourseIframe();});});
+    mediaUrlInput.addEventListener('keydown',(e)=>{if(e.key==='Enter')loadMediaUrlBtn.click();});
+    async function loadRadioCountries(){try{const r=await fetch('https://de1.api.radio-browser.info/json/countries');const countries=await r.json();radioCountry.innerHTML='<option value="">Monde</option>'+countries.sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.iso_3166_1}">${c.name} (${c.stationcount})</option>`).join('');}catch(e){}}
+    searchRadioBtn.addEventListener('click',async()=>{const country=radioCountry.value;let url='https://de1.api.radio-browser.info/json/stations/search?limit=50&hidebroken=true&order=clickcount&reverse=true';if(country)url+=`&countrycode=${country}`;try{const r=await fetch(url);const stations=await r.json();radioStationList.innerHTML='<option value="">-- Choisir --</option>'+stations.map(s=>`<option value="${s.url_resolved||s.url}">${s.name} (${s.country})</option>`).join('');}catch(e){}});
+    playRadioBtn.addEventListener('click',()=>{const url=radioStationList.value;if(url){mediaAudio.src=url;mediaAudio.style.display='block';mediaAudio.play().catch(e=>console.log('Radio play error:',e));}});
+    stopRadioBtn.addEventListener('click',()=>{mediaAudio.pause();mediaAudio.src='';});
+    localMediaFile.addEventListener('change',()=>{const file=localMediaFile.files[0];if(!file)return;const url=URL.createObjectURL(file);if(file.type.startsWith('video/')){mediaVideo.src=url;mediaVideo.style.display='block';mediaAudio.style.display='none';}else{mediaAudio.src=url;mediaAudio.style.display='block';mediaVideo.style.display='none';}});
+    playLocalBtn.addEventListener('click',()=>{if(mediaVideo.src&&mediaVideo.style.display!=='none')mediaVideo.play();else if(mediaAudio.src&&mediaAudio.style.display!=='none')mediaAudio.play();});
+    stopLocalBtn.addEventListener('click',()=>{mediaVideo.pause();mediaAudio.pause();});
+    mediaFsBtn.addEventListener('click',()=>{if(currentMediaType==='local'&&mediaVideo.src&&mediaVideo.style.display!=='none'){fsVideo.src=mediaVideo.src;fsVideo.style.display='block';fsIframe.style.display='none';}else{fsIframe.src=mediaIframe.src;fsIframe.style.display='block';fsVideo.style.display='none';}fsOverlay.style.display='flex';});
+    closeFsBtn.addEventListener('click',()=>{fsOverlay.style.display='none';fsIframe.src='about:blank';fsVideo.src='';});
+    fsOverlay.addEventListener('click',(e)=>{if(e.target===fsOverlay){fsOverlay.style.display='none';fsIframe.src='about:blank';fsVideo.src='';}});
+
+    // ==================== CHAT ====================
+    const chatIframe=document.getElementById('chatIframe');
+    const chatFsBtn=document.getElementById('chatFsBtn');
+    const chatUrlInput=document.getElementById('chatUrlInput');
+    const loadChatUrlBtn=document.getElementById('loadChatUrlBtn');
+    chatIframe.src='about:blank';
+    loadChatUrlBtn.addEventListener('click',()=>{const url=chatUrlInput.value.trim();if(url){chatIframe.src=url;}});
+    chatUrlInput.addEventListener('keydown',(e)=>{if(e.key==='Enter')loadChatUrlBtn.click();});
+    chatFsBtn.addEventListener('click',()=>{fsIframe.src=chatIframe.src;fsIframe.style.display='block';fsVideo.style.display='none';fsOverlay.style.display='flex';});
+
+    // ==================== INIT APP ====================
+    window.addEventListener('load',()=>{if(typeof ethers!=='undefined')initApp();else alert("ethers non chargé");});
+    async function initApp(){
+        let provider=null,signer=null,userAddress=null;
+        const els={connectBtn:document.getElementById('connectBtn'),sendBtn:document.getElementById('sendBtn'),accountInfo:document.getElementById('accountInfo'),balanceInfo:document.getElementById('balanceInfo'),txStatus:document.getElementById('txStatus'),donateStatus:document.getElementById('donateStatus'),invoiceContainer:document.getElementById('invoiceContainer'),manualInvoice:document.getElementById('manualInvoice'),fromDomain:document.getElementById('fromDomain'),toDomain:document.getElementById('toDomain'),amount:document.getElementById('amount'),token:document.getElementById('token'),quickDonateBtn:document.getElementById('quickDonateBtn'),donateAmount:document.getElementById('donateAmount'),invoiceHash:document.getElementById('invoiceHash'),verifyHashBtn:document.getElementById('verifyHashBtn'),invoiceFrom:document.getElementById('invoiceFrom'),invoiceTo:document.getElementById('invoiceTo'),invoiceAmount:document.getElementById('invoiceAmount'),invoiceSymbol:document.getElementById('invoiceSymbol'),generateInvoiceBtn:document.getElementById('generateInvoiceBtn'),sendDomainBtn:document.getElementById('sendDomainBtn'),sendDomainName:document.getElementById('sendDomainName'),sendDomainTo:document.getElementById('sendDomainTo'),sendDomainStatus:document.getElementById('sendDomainStatus')};
+        function setDisconnected(){els.accountInfo.innerText="wallet : non connecté";els.balanceInfo.innerText="solde : --";els.sendBtn.disabled=true;els.sendBtn.classList.remove('ready');els.sendDomainBtn.disabled=true;els.sendDomainBtn.classList.remove('ready');userAddress=null;signer=null;provider=null;}
+        setDisconnected();
+        function updateSendBtnState(){if(signer&&els.toDomain.value.trim()&&!isNaN(parseFloat(els.amount.value))&&parseFloat(els.amount.value)>0){els.sendBtn.disabled=false;els.sendBtn.classList.add('ready');}else{els.sendBtn.disabled=true;els.sendBtn.classList.remove('ready');}}
+        els.toDomain.addEventListener('input',updateSendBtnState);els.amount.addEventListener('input',updateSendBtnState);
+        function truncate(a){return a?`${a.slice(0,6)}...${a.slice(-4)}`:'';}
+
+        async function getDomainCategory(domain){
+            if(!domain||domain.startsWith('0x'))return null;
+            const catPerso=document.getElementById('categoriePersoField').value.trim();if(catPerso)return catPerso;
+            if(LOCAL_CATEGORIES[domain.toLowerCase()])return LOCAL_CATEGORIES[domain.toLowerCase()];
+            try{const r=await fetch(`https://fleurs-resolver-final.vercel.app/api/info?domain=${encodeURIComponent(domain)}`);if(r.ok){const d=await r.json();return d.category||null;}}catch(e){}return null;
+        }
+
+        async function resolveDomain(domain){
+            if(domain.startsWith('0x')&&domain.length===42)return domain;
+            if(currentNetwork!=='xdc'&&domain.endsWith('.eth')){
+                try{const r=await fetch(`https://fleurs-resolver-final.vercel.app/api/resolve?domain=${encodeURIComponent(domain)}`);if(r.ok){const d=await r.json();if(d.result)return d.result;}}catch(e){}
+            }
+            if(currentNetwork==='xdc'){
+                try{const r=await fetch(`https://fleurs-resolver-final.vercel.app/api/resolve?domain=${encodeURIComponent(domain)}`);if(r.ok){const d=await r.json();if(d.result)return d.result;}}catch(e){}
+                try{const p=new ethers.JsonRpcProvider(getRpcUrl());const c=new ethers.Contract(NETWORKS.xdc.contractAddr,["function getAddress(string) view returns (address)"],p);const a=await c.getAddress(domain.toLowerCase().trim());if(a&&a!=="0x0000000000000000000000000000000000000000")return a;}catch(e){}
+            }
+            throw new Error("Domaine non résolu");
+        }
+
+        async function fetchTxDetails(h){
+            if(!provider)provider=new ethers.JsonRpcProvider(getRpcUrl());
+            const tx=await provider.getTransaction(h);if(!tx)throw new Error("Transaction introuvable");
+            let from=tx.from,to=tx.to,amount,symbol=getTokenList()[0].value,nonce=tx.nonce;
+            if(tx.value&&tx.value!==0n){amount=parseFloat(ethers.formatEther(tx.value));}
+            else{
+                const rc=await provider.getTransactionReceipt(h);if(!rc?.logs)throw new Error("Logs non trouvés");
+                const top="0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";let found=false;
+                for(const log of rc.logs){if(log.topics[0]===top){from="0x"+log.topics[1].slice(26);to="0x"+log.topics[2].slice(26);amount=Number(ethers.formatUnits(ethers.toBigInt(log.data),18));found=true;break;}}
+                if(!found)throw new Error("Aucun transfert détecté");
+            }
+            const block=await provider.getBlock(tx.blockNumber);const ts=new Date(block.timestamp*1000).toISOString();
+            const short=h.slice(2,10);const inv=`FDL-${new Date().getFullYear()}-${short}${nonce}`;
+            return{amount,symbol,from,to,invoiceNumber:inv,timestampUTC:ts};
+        }
+
+        async function qrDataURL(data,size=150){const u=`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;const b=await(await fetch(u)).blob();return new Promise(r=>{const rd=new FileReader();rd.onloadend=()=>r(rd.result);rd.readAsDataURL(b);});}
+
+        function getConfigFields(){return{siret:document.getElementById('siretField').value.trim(),tva:parseFloat(document.getElementById('tvaField').value)||0,adresse_siege:document.getElementById('adresseSiegeField').value.trim(),objet_prestation:document.getElementById('objetPrestationField').value.trim(),fiatCurrency:document.getElementById('fiatCurrencyField').value.trim()||'USD',categorie_personnalisee:document.getElementById('categoriePersoField').value.trim(),regime_tva:document.getElementById('regimeTvaField').value,mention_tva:document.getElementById('mentionTvaField').value.trim()};}
+
+        async function buildInvoiceData(h,amt,from,to,sym,inv,ts,catFrom,catTo,amtStr){
+            const cfg=getConfigFields();const price=currentOraclePrice;
+            const effTva=cfg.regime_tva==='auto_entreprise'?0:cfg.tva;let ttc=null,rate=null;
+            if(price&&!isNaN(amt)){rate=price;ttc=amt*price*(1+effTva/100);}
+            const mention=cfg.regime_tva==='auto_entreprise'?(cfg.mention_tva||"TVA non applicable, art. 293B du CGI"):cfg.mention_tva;
+            const f={numero:inv,emetteur:from,categorie_emetteur:catFrom||(cfg.categorie_personnalisee||null),destinataire:to,categorie_destinataire:catTo,montant:amtStr||`${amt} ${sym}`,devise:sym,date:ts,hash:h,lien:getExplorerUrl(h)};
+            if(cfg.siret)f.siret=cfg.siret;if(cfg.adresse_siege)f.adresse_siege=cfg.adresse_siege;if(cfg.objet_prestation)f.objet_prestation=cfg.objet_prestation;
+            if(effTva>0)f.tva_appliquee=`${effTva}%`;else if(cfg.regime_tva==='auto_entreprise')f.tva_appliquee="0% (auto-entreprise)";
+            if(mention)f.mention_tva=mention;if(ttc!==null)f.montant_ttc_fiat=`${ttc.toFixed(4)} ${cfg.fiatCurrency}`;if(rate!==null)f.taux_change_utilise=`${rate.toFixed(8)} ${cfg.fiatCurrency}/${getTokenList()[0].value}`;
+            return f;
+        }
+
+        function buildClientData(f){const c={...f};delete c.categorie_emetteur;delete c.categorie_destinataire;delete c.siret;delete c.adresse_siege;delete c.objet_prestation;delete c.tva_appliquee;delete c.mention_tva;delete c.montant_ttc_fiat;delete c.taux_change_utilise;return c;}
+
+        async function displayInvoice(h,amt,from,to,sym,inv,ts,catFrom=null,catTo=null,amtStr=null){
+            const full=await buildInvoiceData(h,amt,from,to,sym,inv,ts,catFrom,catTo,amtStr);
+            const client=buildClientData(full);
+            const qrD={hash:h,from,to,amount:amtStr||`${amt} ${sym}`,date:ts,explorer:getExplorerUrl(h)};
+            const qrURL=await qrDataURL(JSON.stringify(qrD));
+            const fullStr=JSON.stringify({facture:full},null,2);
+            const clientStr=JSON.stringify({facture:client},null,2);
+            els.invoiceContainer.innerHTML=`<pre style="white-space:pre-wrap;">${fullStr}</pre><div class="qr-code-img"><img src="${qrURL}" alt="QR"></div>`;
+            els.invoiceContainer.style.display='block';
+            document.getElementById('copyJsonBtn').style.display='inline-block';document.getElementById('copyHashBtn').style.display='inline-block';
+            document.getElementById('saveClientBtn').style.display='inline-block';document.getElementById('saveComptaBtn').style.display='inline-block';document.getElementById('saveBothBtn').style.display='inline-block';
+            document.getElementById('copyJsonBtn').onclick=()=>{navigator.clipboard.writeText(fullStr);alert(t('json_copied'));};
+            document.getElementById('copyHashBtn').onclick=()=>{navigator.clipboard.writeText(h);alert(t('hash_copied'));};
+            document.getElementById('saveClientBtn').onclick=()=>downloadInvoice(clientStr,inv,qrURL,'client');
+            document.getElementById('saveComptaBtn').onclick=()=>downloadInvoice(fullStr,inv,qrURL,'comptable');
+            document.getElementById('saveBothBtn').onclick=()=>{downloadInvoice(clientStr,inv,qrURL,'client');setTimeout(()=>downloadInvoice(fullStr,inv,qrURL,'comptable'),500);};
+            detectAndShowLocation();
+        }
+
+        function downloadInvoice(jsonStr,inv,qrURL,suffix){
+            const isDark = document.body.classList.contains('theme-dark');const bg=isDark?'#111':'white';const color=isDark?'#ccc':'#1e2a3a';
+            const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reçu ${inv}</title><style>body{font-family:monospace;padding:20px;background:${bg};color:${color}}pre{white-space:pre-wrap}.qr-code-img{text-align:center;margin:20px 0}.qr-code-img img{width:150px;height:150px;border:1px solid #555;padding:5px;background:white}</style></head><body><pre style="white-space:pre-wrap;">${jsonStr}</pre><div class="qr-code-img"><img src="${qrURL}"></div><div class="hash-link">🔗 <a href="${getExplorerUrl(inv.split('-').pop())}" style="color:#6ba3d6;">${t('view_on_explorer')}</a></div></body></html>`;
+            const blob=new Blob([html],{type:"text/html"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`recu_${inv}_${suffix}.html`;a.click();URL.revokeObjectURL(a.href);alert(t('receipt_downloaded'));
+        }
+
+        async function donate(amt){
+            if(!signer)return alert("Connectez wallet.");if(isNaN(amt)||amt<=0)return;
+            els.donateStatus.innerHTML="⏳ Envoi...";
+            try{
+                const target=currentNetwork==='xdc'?await resolveDomain("fleursdelys.xdc"):userAddress;
+                const fromDisp=els.fromDomain.value||truncate(userAddress);
+                const tx=await signer.sendTransaction({to:target,value:ethers.parseEther(amt.toString()),gasLimit:50000});
+                els.donateStatus.innerHTML=`📡 Tx: ${tx.hash.slice(0,10)}...`;await tx.wait();
+                const tok=getTokenList()[0].value;
+                els.donateStatus.innerHTML=`✅ Don de ${amt} ${tok} effectué !`;
+                const d=await fetchTxDetails(tx.hash);
+                addTxEntry({type:'outgoing',from:fromDisp,to:target,amount:amt,token:tok,hash:tx.hash});
+                await displayInvoice(tx.hash,amt,fromDisp,target,tok,d.invoiceNumber,d.timestampUTC);
+            }catch(e){els.donateStatus.innerHTML=`❌ ${e.message}`;}
+        }
+
+        async function connectWallet(){
+            if(!window.ethereum){alert("Installez MetaMask ou XDCPay.");return;}
+            try{
+                provider=new ethers.BrowserProvider(window.ethereum);await provider.send("eth_requestAccounts",[]);
+                signer=await provider.getSigner();userAddress=await signer.getAddress();
+                window._signer=signer;
+                els.accountInfo.innerHTML=`✅ ${truncate(userAddress)}`;els.balanceInfo.innerHTML=`💰 ${ethers.formatEther(await provider.getBalance(userAddress))} ${getTokenList()[0].value}`;
+                els.sendDomainBtn.disabled=currentNetwork==='xdc'?false:true;
+                if(currentNetwork==='xdc')els.sendDomainBtn.classList.add('ready');
+                updateSendBtnState();
+                window.ethereum.on('accountsChanged',()=>location.reload());
+            }catch(e){alert("Erreur : "+e.message);setDisconnected();}
+        }
+
+        els.connectBtn.onclick=connectWallet;
+        els.quickDonateBtn.onclick=()=>{const a=parseFloat(els.donateAmount.value);if(!isNaN(a)&&a>0)donate(a);else alert("Montant invalide");};
+
+        els.sendBtn.onclick=async()=>{
+            const to=els.toDomain.value.trim(),amt=parseFloat(els.amount.value),tok=els.token.value,from=els.fromDomain.value.trim();
+            if(!to||isNaN(amt)||amt<=0)return alert("Remplissez les champs.");if(!signer)return alert("Connectez wallet.");
+            els.txStatus.innerHTML="🔍 Vérification du domaine émetteur...";
+            try{
+                // Si un domaine émetteur est saisi, vérifier qu'il correspond au wallet connecté.
+                // Si le wallet est propriétaire, le domaine est implicitement souverain.
+                if(from&&!from.startsWith('0x')){
+                    const resolvedFromAddress = await resolveDomain(from);
+                    if(resolvedFromAddress.toLowerCase()!==userAddress.toLowerCase()){
+                        els.txStatus.innerHTML="❌ Le domaine émetteur ne correspond pas à votre wallet connecté.";
+                        return;
+                    }
+                }
+                const target=to.startsWith('0x')&&to.length===42?to:await resolveDomain(to);
+                els.txStatus.innerHTML=`⏳ Envoi de ${amt} ${tok}...`;let tx;
+                const tokenAddr=getTokenAddress(tok);
+                if(!tokenAddr){tx=await signer.sendTransaction({to:target,value:ethers.parseEther(amt.toString()),gasLimit:50000});}
+                else{const c=new ethers.Contract(tokenAddr,["function transfer(address,uint256) returns (bool)"],signer);tx=await c.transfer(target,ethers.parseUnits(amt.toString(),getTokenDecimals(tok)));}
+                els.txStatus.innerHTML+=`<br>📡 Tx: ${tx.hash.slice(0,10)}...`;await tx.wait();els.txStatus.innerHTML+=`<br>✅ Succès !`;
+                const fromDisp=from||truncate(userAddress);const d=await fetchTxDetails(tx.hash);
+                addTxEntry({type:'outgoing',from:fromDisp,to:to,amount:amt,token:tok,hash:tx.hash});
+                const fromCat=await getDomainCategory(fromDisp),toCat=await getDomainCategory(to);
+                await displayInvoice(tx.hash,amt,fromDisp,to,tok,d.invoiceNumber,d.timestampUTC,fromCat,toCat);
+            }catch(e){els.txStatus.innerHTML+=`<br>❌ ${e.message}`;}
+        };
+
+        els.sendDomainBtn.onclick=async()=>{
+            const domainName=els.sendDomainName.value.trim();let toAddr=els.sendDomainTo.value.trim();
+            if(!domainName||!toAddr)return alert("Remplissez le nom du domaine et l'adresse destinataire.");
+            if(!signer)return alert("Connectez wallet.");
+            if(currentNetwork!=='xdc')return alert("L'envoi de domaine n'est disponible que sur XDC Network.");
+            els.sendDomainStatus.innerHTML="🔍 Résolution du destinataire...";
+            try{
+                if(!toAddr.startsWith('0x')){
+                    els.sendDomainStatus.innerHTML="🔍 Résolution du domaine destinataire...";
+                    toAddr = await resolveDomain(toAddr);
+                    els.sendDomainStatus.innerHTML=`✅ Destinataire résolu : ${toAddr.slice(0,6)}...${toAddr.slice(-4)}`;
+                }
+                if(!toAddr.startsWith('0x')||toAddr.length!==42)return alert("Adresse destinataire invalide.");
+                const provider2=new ethers.JsonRpcProvider(getRpcUrl());
+                const contractAddr=NETWORKS.xdc.contractAddr;
+                const contract=new ethers.Contract(contractAddr,[
+                    "function getTokenId(string name) view returns (uint256)",
+                    "function ownerOf(uint256 tokenId) view returns (address)",
+                    "function transferFrom(address from, address to, uint256 tokenId)"
+                ],signer);
+                const tokenId=await contract.getTokenId(domainName.toLowerCase().trim());
+                const owner=await contract.ownerOf(tokenId);
+                if(owner.toLowerCase()!==userAddress.toLowerCase()){els.sendDomainStatus.innerHTML="❌ Ce domaine ne vous appartient pas.";return;}
+                els.sendDomainStatus.innerHTML="⏳ Transfert du domaine...";
+                const tx=await contract.transferFrom(userAddress,toAddr,tokenId,{gasLimit:150000});
+                els.sendDomainStatus.innerHTML=`📡 Tx: ${tx.hash.slice(0,10)}...`;
+                await tx.wait();
+                els.sendDomainStatus.innerHTML=`✅ Domaine ${domainName} envoyé à ${els.sendDomainTo.value} !`;
+                addTxEntry({type:'outgoing',from:domainName,to:els.sendDomainTo.value,amount:'1',token:'NFT',hash:tx.hash});detectAndShowLocation();
+            }catch(e){els.sendDomainStatus.innerHTML=`❌ ${e.message}`;}
+        };
+
+        els.verifyHashBtn.onclick=async()=>{const h=els.invoiceHash.value.trim();if(!h?.startsWith('0x')||h.length<66)return alert("Hash invalide.");els.manualInvoice.style.display='none';try{if(!provider)provider=new ethers.JsonRpcProvider(getRpcUrl());const{amount,symbol,from,to,invoiceNumber,timestampUTC}=await fetchTxDetails(h);els.invoiceAmount.value=amount;els.invoiceSymbol.value=symbol;els.invoiceSymbol.disabled=true;els.invoiceFrom.value=from;els.invoiceTo.value=to;alert(`✅ Vérifié : ${amount} ${symbol}`);window._pendingManual={hash:h,amount,symbol,from,to,invoiceNumber,timestampUTC};}catch(e){alert("Erreur : "+e.message);}};
+        els.generateInvoiceBtn.onclick=async()=>{const p=window._pendingManual;if(!p)return alert("Vérifiez d'abord un hash.");const fromCat=await getDomainCategory(p.from),toCat=await getDomainCategory(p.to);await displayInvoice(p.hash,p.amount,p.from,p.to,p.symbol,p.invoiceNumber,p.timestampUTC,fromCat,toCat,`${p.amount} ${p.symbol}`);};
+        setTimeout(async()=>{if(getNetwork().oracleDefault)await testOracle(getNetwork().oracleDefault);updateTTCEstimate();},1000);
+    }
+</script>
+</body>
+</html>

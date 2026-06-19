@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleurs de Lys API – QR ticket</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #eef2f5; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; padding: 2rem 1rem; color: #1e2a3a; }
+        .container { max-width: 720px; margin: 0 auto; }
+        .card { background: #ffffff; border-radius: 24px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e4e9ef; }
+        .header-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+        .header-left { display: flex; flex-direction: column; gap: 0.5rem; }
+        h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; background: linear-gradient(135deg, #1e2a3a, #2c3e4e); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .sub { font-size: 0.75rem; color: #5c6f87; }
+        .donate-line { display: flex; align-items: center; gap: 0.5rem; background: #f4f6fa; padding: 0.4rem 0.8rem; border-radius: 48px; }
+        .donate-line span { font-weight: 500; color: #2c3e4e; }
+        .donate-line input { width: 70px; padding: 0.4rem 0.5rem; border-radius: 40px; border: 1px solid #cfdde6; background: white; font-size: 0.8rem; text-align: center; }
+        .donate-line button { background: #e2e8f0; border: none; padding: 0.4rem 0.8rem; border-radius: 40px; font-weight: 500; cursor: pointer; color: #1e2a3a; transition: background 0.2s; }
+        .donate-line button:hover { background: #cbd5e1; }
+        .inline-status { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        button { background: #e2e8f0; border: none; padding: 0.5rem 1.2rem; border-radius: 40px; font-weight: 500; cursor: pointer; color: #1e2a3a; transition: all 0.2s; }
+        button:active { transform: scale(0.97); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.primary { background: #2c3e4e; color: white; }
+        button.primary:hover { background: #1e2a3a; }
+        .status { background: #f4f6fa; padding: 0.5rem 1rem; border-radius: 40px; font-size: 0.8rem; color: #2c3e4e; word-break: break-all; }
+        .row { display: flex; gap: 1rem; margin: 1rem 0; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 160px; }
+        label { display: block; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: #5c6f87; margin-bottom: 0.3rem; }
+        input, select { width: 100%; padding: 0.7rem 0.9rem; border-radius: 48px; border: 1px solid #cfdde6; background: white; font-size: 0.9rem; transition: border 0.2s; }
+        input:focus, select:focus { outline: none; border-color: #8ba0b5; }
+        small { font-size: 0.7rem; color: #7a8a9e; display: block; margin-top: 0.25rem; }
+        .invoice { background: #fafcfd; border-radius: 20px; padding: 1rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-word; border: 1px solid #e4e9ef; margin-top: 1rem; }
+        .invoice-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
+        .invoice-actions button { background: #edf2f7; font-size: 0.7rem; padding: 0.3rem 0.8rem; }
+        .hash-link { margin-top: 0.6rem; font-size: 0.7rem; }
+        footer { text-align: center; font-size: 0.7rem; color: #8ba0b5; margin-top: 2rem; }
+        .qr-code-img { margin-top: 1rem; text-align: center; }
+        .qr-code-img img { width: 150px; height: 150px; border: 1px solid #ddd; padding: 5px; background: white; }
+        .yiking-box { background: #ffffff; border-radius: 16px; padding: 0.75rem 1rem; border: 1px solid #e4e9ef; text-align: center; min-width: 150px; max-width: 180px; }
+        .yiking-title { font-size: 0.7rem; font-weight: 500; color: #2c3e4e; }
+        .yiking-title span { font-size: 1.2rem; }
+        .yiking-box button { background: #2c3e4e; color: white; font-size: 0.7rem; padding: 0.3rem 0.8rem; margin-top: 0.4rem; }
+        .yiking-result { font-size: 1.5rem; padding: 0.4rem 0; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; }
+        .yiking-hex { font-size: 2.4rem; font-weight: bold; }
+        .yiking-name { font-size: 1rem; font-weight: bold; color: #1e2a3a; }
+        .yiking-muted { font-size: 0.85rem; font-weight: bold; color: #5c6f87; margin-top: 0.15rem; }
+        .yiking-interp { font-size: 0.65rem; font-weight: bold; color: #5c6f87; margin-top: 0.3rem; font-style: italic; max-width: 200px; line-height: 1.3; }
+        @keyframes dragonFire { 0% { transform: scale(1) rotate(0deg); opacity: 0.5; } 50% { transform: scale(1.3) rotate(180deg); opacity: 1; } 100% { transform: scale(1) rotate(360deg); opacity: 0.5; } }
+        .dragon-anim { animation: dragonFire 0.6s linear infinite; font-size: 2.4rem; display: inline-block; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.16.0/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="header-flex">
+            <div class="header-left">
+                <h1>🌿 Fleurs de Lys</h1>
+                <div class="sub" data-i18n="subtitle">résolveur .xdc · .rwa · .depin</div>
+                <div class="donate-line">
+                    <span>💝</span> <span data-i18n="donate">don</span>
+                    <input type="number" id="donateAmount" placeholder="montant" step="any" value="1">
+                    <button id="quickDonateBtn" data-i18n="send">envoyer</button>
+                </div>
+            </div>
+            <div class="yiking-box" id="yikingBox">
+                <div class="yiking-title"><span>🐉</span> Yi King</div>
+                <div class="yiking-result" id="yikingResult"></div>
+                <button id="yikingBtn" data-i18n="draw">Tirage</button>
+            </div>
+        </div>
+        <div class="inline-status">
+            <button id="connectBtn" data-i18n="connect">🔌 connecter</button>
+            <div id="accountInfo" class="status" data-i18n="wallet_not_connected">wallet : non connecté</div>
+            <div id="balanceInfo" class="status" data-i18n="balance">solde : --</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 1rem; font-weight: 500;" data-i18n="send_to_domain">✎ envoyer à un domaine</h3>
+        <div class="row">
+            <div class="col">
+                <label data-i18n="from_domain">depuis (domaine)</label>
+                <input type="text" id="fromDomain" placeholder="ex: fleursdelys.xdc">
+                <small data-i18n="optional">optionnel</small>
+            </div>
+            <div class="col">
+                <label data-i18n="to_domain">vers (domaine ou adresse)</label>
+                <input type="text" id="toDomain" placeholder="ex: gold.xdc">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label data-i18n="amount_label">montant</label>
+                <input type="number" id="amount" placeholder="montant" step="any">
+            </div>
+            <div class="col">
+                <label data-i18n="currency">devise</label>
+                <select id="token">
+                    <option value="XDC">XDC (natif)</option>
+                    <option value="USDC">USDC</option>
+                    <option value="CGO">CGO (Comtech Gold)</option>
+                    <option value="SRX">SRX (StorX)</option>
+                    <option value="PLI">PLI (Plugin)</option>
+                    <option value="LBT">LBT (Law Blocks)</option>
+                    <option value="FXD">FXD (Fathom Dollar)</option>
+                </select>
+            </div>
+        </div>
+        <button id="sendBtn" disabled data-i18n="send_btn">📤 envoyer</button>
+        <div id="txStatus" class="status" style="margin-top: 1rem;"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 0.75rem; font-weight: 500;" data-i18n="recent_invoice">🧾 facture récente</h3>
+        <div id="donateStatus" class="status" style="background: #f4f6fa;"></div>
+        <div id="invoiceContainer" class="invoice" style="display: none;"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 0.75rem; font-weight: 500;" data-i18n="invoice_from_hash">🔍 générer facture depuis un hash</h3>
+        <input type="text" id="invoiceHash" placeholder="hash de transaction (0x...)" style="margin-bottom: 0.5rem;">
+        <button id="verifyHashBtn" style="width: auto;" data-i18n="verify_hash">vérifier le hash</button>
+        <div style="display: flex; gap: 0.8rem; margin-top: 1rem;">
+            <input type="text" id="invoiceFrom" placeholder="émetteur (adresse)" readonly style="flex:1; background:#f8fafc;">
+            <input type="text" id="invoiceTo" placeholder="destinataire (adresse)" readonly style="flex:1; background:#f8fafc;">
+        </div>
+        <div style="display: flex; gap: 0.8rem; margin-top: 0.8rem;">
+            <input type="number" id="invoiceAmount" placeholder="montant" step="any" readonly style="flex:2; background:#f8fafc;">
+            <select id="invoiceSymbol" disabled style="flex:1;">
+                <option>XDC</option><option>USDC</option><option>CGO</option><option>SRX</option><option>PLI</option><option>LBT</option><option>FXD</option>
+            </select>
+        </div>
+        <button id="generateInvoiceBtn" style="margin-top: 1rem;" data-i18n="generate_invoice">générer la facture</button>
+        <div id="manualInvoice" class="invoice" style="display: none; margin-top: 1rem;"></div>
+    </div>
+
+    <footer>© 2026 FocalZero – <span data-i18n="footer">résolveur décentralisé</span></footer>
+</div>
+
+<script>
+    // ==================== i18n ====================
+    const I18N = {
+        fr: { subtitle: 'résolveur .xdc · .rwa · .depin', draw: 'Tirage', donate: 'don', send: 'envoyer', connect: '🔌 connecter', wallet_not_connected: 'wallet : non connecté', balance: 'solde : --', send_to_domain: '✎ envoyer à un domaine', from_domain: 'depuis (domaine)', optional: 'optionnel', to_domain: 'vers (domaine ou adresse)', amount_label: 'montant', currency: 'devise', send_btn: '📤 envoyer', recent_invoice: '🧾 facture récente', invoice_from_hash: '🔍 générer facture depuis un hash', verify_hash: 'vérifier le hash', generate_invoice: 'générer la facture', footer: 'résolveur décentralisé', copy_json: 'Copier JSON', copy_hash: 'Copier hash', download_invoice: 'Télécharger la facture (HTML)', view_on_xdcscan: 'Voir sur XDCScan', fill_fields: 'Remplissez les champs.', connect_wallet: 'Connectez wallet.', verifying_sender: '🔍 Vérification du domaine émetteur...', sender_mismatch: '❌ Le domaine émetteur ne correspond pas à votre wallet connecté.', sending: '⏳ Envoi de', tx_sent: '📡 Tx:', success: '✅ Succès !', donation_success: '✅ Don de', donation_to: 'à fleursdelys.xdc effectué !', install_wallet: 'Installez MetaMask ou XDCPay.', invalid_amount: 'Montant invalide', invalid_hash: 'Hash invalide.', verified: '✅ Vérifié :', verify_first: "Vérifiez d'abord un hash.", json_copied: 'JSON copié', hash_copied: 'Hash copié', invoice_downloaded: 'Facture HTML téléchargée. Le QR code est visible et scannable.', domain_not_resolved: 'Domaine non résolu', token_not_supported: 'Token non supporté', transaction_not_found: 'Transaction introuvable', no_logs: 'Logs non trouvés', no_transfer: 'Aucun transfert détecté', invoice_gen_failed: '⚠️ Facture non générée :', api_unavailable: 'API indisponible', category_load_error: 'Erreur chargement catégorie:', ethers_not_loaded: 'ethers non chargé' },
+        en: { subtitle: 'resolver .xdc · .rwa · .depin', draw: 'Draw', donate: 'donate', send: 'send', connect: '🔌 connect', wallet_not_connected: 'wallet : not connected', balance: 'balance : --', send_to_domain: '✎ send to a domain', from_domain: 'from (domain)', optional: 'optional', to_domain: 'to (domain or address)', amount_label: 'amount', currency: 'currency', send_btn: '📤 send', recent_invoice: '🧾 recent invoice', invoice_from_hash: '🔍 generate invoice from hash', verify_hash: 'verify hash', generate_invoice: 'generate invoice', footer: 'decentralized resolver', copy_json: 'Copy JSON', copy_hash: 'Copy hash', download_invoice: 'Download invoice (HTML)', view_on_xdcscan: 'View on XDCScan', fill_fields: 'Fill in all fields.', connect_wallet: 'Connect wallet.', verifying_sender: '🔍 Verifying sender domain...', sender_mismatch: '❌ Sender domain does not match your connected wallet.', sending: '⏳ Sending', tx_sent: '📡 Tx:', success: '✅ Success!', donation_success: '✅ Donation of', donation_to: 'to fleursdelys.xdc completed!', install_wallet: 'Install MetaMask or XDCPay.', invalid_amount: 'Invalid amount', invalid_hash: 'Invalid hash.', verified: '✅ Verified:', verify_first: 'Verify a hash first.', json_copied: 'JSON copied', hash_copied: 'Hash copied', invoice_downloaded: 'Invoice HTML downloaded. QR code is visible and scannable.', domain_not_resolved: 'Domain not resolved', token_not_supported: 'Token not supported', transaction_not_found: 'Transaction not found', no_logs: 'Logs not found', no_transfer: 'No transfer detected', invoice_gen_failed: '⚠️ Invoice generation failed:', api_unavailable: 'API unavailable', category_load_error: 'Category load error:', ethers_not_loaded: 'ethers not loaded' }
+    };
+
+    function getBrowserLanguage() {
+        const lang = navigator.language || navigator.userLanguage;
+        const short = lang.split('-')[0].toLowerCase();
+        return ['fr','en'].includes(short) ? short : 'en';
+    }
+
+    const browserLang = getBrowserLanguage();
+    const langData = I18N[browserLang] || I18N['en'];
+
+    function applyTranslations() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (langData[key]) el.textContent = langData[key];
+        });
+    }
+
+    function t(key) { return langData[key] || key; }
+
+    applyTranslations();
+
+    // ==================== YI KING ====================
+    const ICHING = [
+        { symbol: '䷀', name: { fr: 'Le Créateur', en: 'The Creative' }, interp: { fr: 'Force créatrice. Action décisive. Succès durable.', en: 'Creative force. Decisive action. Lasting success.' } },
+        { symbol: '䷁', name: { fr: 'Le Réceptif', en: 'The Receptive' }, interp: { fr: 'Accueillir sans résister. Suivre le chemin. La patience nourrit.', en: 'Receive without resistance. Follow the path. Patience nourishes.' } },
+        { symbol: '䷂', name: { fr: 'La Difficulté Initiale', en: 'Difficulty at the Beginning' }, interp: { fr: 'Nuage et tonnerre. Le chaos précède la naissance. Persévérer.', en: 'Cloud and thunder. Chaos precedes birth. Persevere.' } },
+        { symbol: '䷃', name: { fr: 'La Folie Juvénile', en: 'Youthful Folly' }, interp: { fr: 'Esprit inexpérimenté. Chercher le maître. Questionner sans cesse.', en: 'Inexperienced mind. Seek the teacher. Question endlessly.' } },
+        { symbol: '䷄', name: { fr: "L'Attente", en: 'Waiting' }, interp: { fr: 'Nuages au ciel. Le fruit mûrit. Attendre le bon moment.', en: 'Clouds in the sky. The fruit ripens. Wait for the right moment.' } },
+        { symbol: '䷅', name: { fr: 'Le Conflit', en: 'Conflict' }, interp: { fr: 'Ciel et eau opposés. Le litige épuise. Chercher l arbitrage.', en: 'Heaven and water opposed. Litigation exhausts. Seek arbitration.' } },
+        { symbol: '䷆', name: { fr: "L'Armée", en: 'The Army' }, interp: { fr: 'Eau sous la terre. Force collective. Discipline et ordre.', en: 'Water under earth. Collective strength. Discipline and order.' } },
+        { symbol: '䷇', name: { fr: 'La Solidarité', en: 'Holding Together' }, interp: { fr: 'Eau sur la terre. Union sincere. Se rassembler durablement.', en: 'Water on earth. Sincere union. Gather durably.' } },
+        { symbol: '䷈', name: { fr: 'Le Petit Domestique', en: 'The Taming Power of the Small' }, interp: { fr: 'Vent au ciel. Petites actions repetees. Grands effets.', en: 'Wind in heaven. Small repeated actions. Great effects.' } },
+        { symbol: '䷉', name: { fr: 'La Marche', en: 'Treading' }, interp: { fr: 'Lac sous le ciel. Avancer prudemment. Le tigre ne mord pas.', en: 'Lake under heaven. Advance cautiously. The tiger does not bite.' } },
+        { symbol: '䷊', name: { fr: 'La Paix', en: 'Peace' }, interp: { fr: 'Terre et ciel unis. Harmonie feconde. Prospérité partagee.', en: 'Earth and heaven united. Fertile harmony. Shared prosperity.' } },
+        { symbol: '䷋', name: { fr: 'La Stagnation', en: 'Standstill' }, interp: { fr: 'Ciel et terre separes. Blocage passager. Se retirer dignement.', en: 'Heaven and earth apart. Temporary blockage. Withdraw with dignity.' } },
+        { symbol: '䷌', name: { fr: 'La Communauté', en: 'Fellowship with Men' }, interp: { fr: 'Feu sous le ciel. Union éclaire. Rassemblement sincère.', en: 'Fire under heaven. Union enlightens. Sincere gathering.' } },
+        { symbol: '䷍', name: { fr: 'La Grande Possession', en: 'Possession in Great Measure' }, interp: { fr: 'Feu au ciel. Richesse partagée. Générosité.', en: 'Fire in heaven. Shared wealth. Generosity.' } },
+        { symbol: '䷎', name: { fr: "L'Humilité", en: 'Modesty' }, interp: { fr: 'Montagne sous terre. Grandeur humble. Équilibre.', en: 'Mountain under earth. Humble greatness. Balance.' } },
+        { symbol: '䷏', name: { fr: "L'Enthousiasme", en: 'Enthusiasm' }, interp: { fr: 'Tonnerre sur terre. Élan collectif. Joie partagée.', en: 'Thunder on earth. Collective momentum. Shared joy.' } },
+        { symbol: '䷐', name: { fr: 'La Suite', en: 'Following' }, interp: { fr: 'Lac sous le tonnerre. Suivre le mouvement. Adaptation.', en: 'Lake under thunder. Follow the movement. Adaptation.' } },
+        { symbol: '䷑', name: { fr: 'Le Travail sur le Corrompu', en: 'Work on What Has Been Spoiled' }, interp: { fr: 'Vent sous la montagne. Nettoyer le passé. Réparer.', en: 'Wind under mountain. Clean the past. Repair.' } },
+        { symbol: '䷒', name: { fr: "L'Approche", en: 'Approach' }, interp: { fr: 'Terre sur le lac. Proximité bienveillante. Avancer.', en: 'Earth over lake. Benevolent proximity. Advance.' } },
+        { symbol: '䷓', name: { fr: 'La Contemplation', en: 'Contemplation' }, interp: { fr: 'Vent sur terre. Observer. Méditer. Comprendre.', en: 'Wind over earth. Observe. Meditate. Understand.' } },
+        { symbol: '䷔', name: { fr: 'La Morsure', en: 'Biting Through' }, interp: { fr: 'Feu sous le tonnerre. Percer l obstacle. Justice.', en: 'Fire under thunder. Break through. Justice.' } },
+        { symbol: '䷕', name: { fr: 'La Grâce', en: 'Grace' }, interp: { fr: 'Feu sous la montagne. Beauté simple. Forme juste.', en: 'Fire under mountain. Simple beauty. Right form.' } },
+        { symbol: '䷖', name: { fr: "L'Éclatement", en: 'Splitting Apart' }, interp: { fr: 'Montagne sur terre. Rupture inévitable. Préparer.', en: 'Mountain on earth. Inevitable split. Prepare.' } },
+        { symbol: '䷗', name: { fr: 'Le Retour', en: 'Return' }, interp: { fr: 'Tonnerre sous terre. Renouveau. Cycle naturel.', en: 'Thunder under earth. Renewal. Natural cycle.' } },
+        { symbol: '䷘', name: { fr: "L'Innocence", en: 'Innocence' }, interp: { fr: 'Tonnerre sous ciel. Pureté originelle. Spontanéité.', en: 'Thunder under heaven. Original purity. Spontaneity.' } },
+        { symbol: '䷙', name: { fr: 'Le Grand Domestique', en: 'The Taming Power of the Great' }, interp: { fr: 'Montagne sous ciel. Force maîtrisée. Patience.', en: 'Mountain under heaven. Tamed strength. Patience.' } },
+        { symbol: '䷚', name: { fr: 'Les Commissures', en: 'The Corners of the Mouth' }, interp: { fr: 'Montagne sous tonnerre. Nourrir. Paroles justes.', en: 'Mountain under thunder. Nourish. Right words.' } },
+        { symbol: '䷛', name: { fr: 'La Grande Démesure', en: 'Preponderance of the Great' }, interp: { fr: 'Lac sous vent. Poids excessif. Rééquilibrer.', en: 'Lake under wind. Excess weight. Rebalance.' } },
+        { symbol: '䷜', name: { fr: "L'Insondable", en: 'The Abysmal' }, interp: { fr: 'Eau double. Profondeur. Danger. Courage.', en: 'Double water. Depth. Danger. Courage.' } },
+        { symbol: '䷝', name: { fr: 'Le Feu', en: 'The Clinging' }, interp: { fr: 'Feu double. Clarté. Dépendance juste.', en: 'Double fire. Clarity. Right dependence.' } },
+        { symbol: '䷞', name: { fr: "L'Influence", en: 'Influence' }, interp: { fr: 'Lac sous montagne. Attraction. Union.', en: 'Lake under mountain. Attraction. Union.' } },
+        { symbol: '䷟', name: { fr: 'La Durée', en: 'Duration' }, interp: { fr: 'Tonnerre sous vent. Persévérance. Stabilité.', en: 'Thunder under wind. Perseverance. Stability.' } },
+        { symbol: '䷠', name: { fr: 'La Retraite', en: 'Retreat' }, interp: { fr: 'Montagne sous ciel. Recul stratégique. Préserver.', en: 'Mountain under heaven. Strategic retreat. Preserve.' } },
+        { symbol: '䷡', name: { fr: 'La Grande Puissance', en: 'The Power of the Great' }, interp: { fr: 'Tonnerre sous ciel. Force majeure. Agir.', en: 'Thunder under heaven. Major force. Act.' } },
+        { symbol: '䷢', name: { fr: 'Le Progrès', en: 'Progress' }, interp: { fr: 'Feu sur terre. Avancée. Lumière.', en: 'Fire on earth. Advance. Light.' } },
+        { symbol: '䷣', name: { fr: "L'Obscurcissement", en: 'Darkening of the Light' }, interp: { fr: 'Terre sur feu. Lumière voilée. Prudence.', en: 'Earth over fire. Veiled light. Caution.' } },
+        { symbol: '䷤', name: { fr: 'La Famille', en: 'The Family' }, interp: { fr: 'Vent sous feu. Foyer. Chaleur humaine.', en: 'Wind under fire. Home. Human warmth.' } },
+        { symbol: '䷥', name: { fr: "L'Opposition", en: 'Opposition' }, interp: { fr: 'Feu sous lac. Divergence. Comprendre l autre.', en: 'Fire under lake. Divergence. Understand the other.' } },
+        { symbol: '䷦', name: { fr: "L'Obstacle", en: 'Obstruction' }, interp: { fr: 'Eau sous montagne. Blocage. Persévérer.', en: 'Water under mountain. Blockage. Persevere.' } },
+        { symbol: '䷧', name: { fr: 'La Libération', en: 'Deliverance' }, interp: { fr: 'Tonnerre sous eau. Délivrance. Soulagement.', en: 'Thunder under water. Deliverance. Relief.' } },
+        { symbol: '䷨', name: { fr: 'La Diminution', en: 'Decrease' }, interp: { fr: 'Montagne sous lac. Réduire. Simplifier.', en: 'Mountain under lake. Reduce. Simplify.' } },
+        { symbol: '䷩', name: { fr: "L'Augmentation", en: 'Increase' }, interp: { fr: 'Vent sous tonnerre. Croissance. Générosité.', en: 'Wind under thunder. Growth. Generosity.' } },
+        { symbol: '䷪', name: { fr: 'La Percée', en: 'Breakthrough' }, interp: { fr: 'Lac sous ciel. Rupture nette. Décision.', en: 'Lake under heaven. Clean break. Decision.' } },
+        { symbol: '䷫', name: { fr: 'La Rencontre', en: 'Coming to Meet' }, interp: { fr: 'Vent sous ciel. Rencontre fortuite. Ouverture.', en: 'Wind under heaven. Chance meeting. Openness.' } },
+        { symbol: '䷬', name: { fr: 'Le Rassemblement', en: 'Gathering Together' }, interp: { fr: 'Lac sur terre. Réunion féconde. Unité.', en: 'Lake on earth. Fertile gathering. Unity.' } },
+        { symbol: '䷭', name: { fr: "L'Ascension", en: 'Pushing Upward' }, interp: { fr: 'Vent sous terre. Élévation. Persévérance.', en: 'Wind under earth. Elevation. Perseverance.' } },
+        { symbol: '䷮', name: { fr: "L'Accablement", en: 'Oppression' }, interp: { fr: 'Eau sous lac. Épuisement. Résilience.', en: 'Water under lake. Exhaustion. Resilience.' } },
+        { symbol: '䷯', name: { fr: 'Le Puits', en: 'The Well' }, interp: { fr: 'Eau sous vent. Source constante. Partage.', en: 'Water under wind. Constant source. Sharing.' } },
+        { symbol: '䷰', name: { fr: 'La Révolution', en: 'Revolution' }, interp: { fr: 'Lac sous feu. Changement radical. Mue.', en: 'Lake under fire. Radical change. Molt.' } },
+        { symbol: '䷱', name: { fr: 'Le Chaudron', en: 'The Cauldron' }, interp: { fr: 'Feu sous vent. Transformation. Alchimie.', en: 'Fire under wind. Transformation. Alchemy.' } },
+        { symbol: '䷲', name: { fr: "L'Éveil", en: 'The Arousing' }, interp: { fr: 'Tonnerre double. Choc. Éveil. Réaction.', en: 'Double thunder. Shock. Awakening. Reaction.' } },
+        { symbol: '䷳', name: { fr: "L'Immobilité", en: 'Keeping Still' }, interp: { fr: 'Montagne double. Arrêt. Méditation. Paix.', en: 'Double mountain. Stillness. Meditation. Peace.' } },
+        { symbol: '䷴', name: { fr: 'Le Développement', en: 'Development' }, interp: { fr: 'Vent sous montagne. Progression lente. Constance.', en: 'Wind under mountain. Slow progress. Constancy.' } },
+        { symbol: '䷵', name: { fr: 'La Fiancée', en: 'The Marrying Maiden' }, interp: { fr: 'Tonnerre sous lac. Union nouvelle. Adaptation.', en: 'Thunder under lake. New union. Adaptation.' } },
+        { symbol: '䷶', name: { fr: "L'Abondance", en: 'Abundance' }, interp: { fr: 'Tonnerre sous feu. Plénitude. Partage.', en: 'Thunder under fire. Fullness. Sharing.' } },
+        { symbol: '䷷', name: { fr: 'Le Voyageur', en: 'The Wanderer' }, interp: { fr: 'Feu sous montagne. Errance. Découverte.', en: 'Fire under mountain. Wandering. Discovery.' } },
+        { symbol: '䷸', name: { fr: 'La Douceur', en: 'The Gentle' }, interp: { fr: 'Vent double. Pénétration douce. Influence.', en: 'Double wind. Gentle penetration. Influence.' } },
+        { symbol: '䷹', name: { fr: 'La Joie', en: 'The Joyous' }, interp: { fr: 'Lac double. Joie communicative. Partage.', en: 'Double lake. Communicative joy. Sharing.' } },
+        { symbol: '䷺', name: { fr: 'La Dispersion', en: 'Dispersion' }, interp: { fr: 'Vent sous eau. Dispersion. Dissolution.', en: 'Wind under water. Dispersion. Dissolution.' } },
+        { symbol: '䷻', name: { fr: 'La Restriction', en: 'Limitation' }, interp: { fr: 'Eau sous lac. Limite saine. Économie.', en: 'Water under lake. Healthy limit. Economy.' } },
+        { symbol: '䷼', name: { fr: 'La Vérité Intérieure', en: 'Inner Truth' }, interp: { fr: 'Vent sous lac. Sincérité. Confiance.', en: 'Wind under lake. Sincerity. Trust.' } },
+        { symbol: '䷽', name: { fr: 'La Petite Démesure', en: 'Preponderance of the Small' }, interp: { fr: 'Tonnerre sous montagne. Excès modeste. Prudence.', en: 'Thunder under mountain. Modest excess. Caution.' } },
+        { symbol: '䷾', name: { fr: "L'Achèvement", en: 'After Completion' }, interp: { fr: 'Feu sous eau. Chose accomplie. Vigilance.', en: 'Fire under water. Accomplished. Vigilance.' } },
+        { symbol: '䷿', name: { fr: "L'Inachèvement", en: 'Before Completion' }, interp: { fr: 'Eau sous feu. Transition. Dernier effort.', en: 'Water under fire. Transition. Final effort.' } }
+    ];
+
+    function castCoins() {
+        let total = 0;
+        for (let i = 0; i < 3; i++) total += Math.random() < 0.5 ? 2 : 3;
+        return total;
+    }
+
+    function castHexagram() {
+        const lines = [], changing = [];
+        for (let i = 0; i < 6; i++) {
+            const v = castCoins();
+            lines.push(v % 2 === 0 ? 0 : 1);
+            if (v === 6 || v === 9) changing.push(i);
+        }
+        return { lines, changing };
+    }
+
+    function getHexNum(lines) {
+        let n = 0;
+        for (let i = 0; i < 6; i++) if (lines[5 - i] === 1) n += Math.pow(2, i);
+        return n;
+    }
+
+    function doReading() {
+        const r = castHexagram();
+        const num = getHexNum(r.lines);
+        const data = ICHING[num - 1];
+        let mutNum = null, mutData = null;
+        if (r.changing.length > 0) {
+            const mut = [...r.lines];
+            r.changing.forEach(i => mut[i] = mut[i] === 0 ? 1 : 0);
+            mutNum = getHexNum(mut);
+            if (mutNum !== num) mutData = ICHING[mutNum - 1];
+        }
+        return { num, data, mutNum, mutData };
+    }
+
+    const yikingBtn = document.getElementById('yikingBtn');
+    const yikingResult = document.getElementById('yikingResult');
+
+    function triggerDraw() {
+        yikingBtn.style.display = 'none';
+        yikingResult.innerHTML = '<span class="dragon-anim">🐉</span>';
+        yikingResult.style.display = 'flex';
+        setTimeout(() => {
+            const r = doReading();
+            if (!r.data) { yikingResult.innerHTML = 'Erreur'; yikingBtn.style.display = 'inline-block'; return; }
+            const name = r.data.name[browserLang] || r.data.name['en'];
+            const interp = r.data.interp[browserLang] || r.data.interp['en'];
+            let h = `<div class="yiking-hex">${r.data.symbol}</div><div class="yiking-name">${r.num}. ${name}</div><div class="yiking-interp">${interp}</div>`;
+            if (r.mutData) {
+                const mname = r.mutData.name[browserLang] || r.mutData.name['en'];
+                const minterp = r.mutData.interp[browserLang] || r.mutData.interp['en'];
+                h += `<div class="yiking-muted">→ ${r.mutNum}. ${r.mutData.symbol} ${mname}</div><div class="yiking-interp">${minterp}</div>`;
+            }
+            yikingResult.innerHTML = h;
+            yikingResult.style.display = 'flex';
+            yikingBtn.style.display = 'inline-block';
+        }, 2000);
+    }
+
+    yikingBtn.addEventListener('click', triggerDraw);
+
+    // ==================== INIT APP ====================
+    window.addEventListener('load', () => {
+        if (typeof ethers === 'undefined') { alert(t('ethers_not_loaded')); return; }
+        initApp();
+    });
+
+    async function initApp() {
+        let provider = null, signer = null, userAddress = null;
+        const API_BASE = "https://fleurs-resolver-final.vercel.app";
+        const API_RESOLVE = API_BASE + "/api/resolve";
+        const API_INFO = API_BASE + "/api/info";
+        const RPC_POOL = ["https://rpc.xdcrpc.com", "https://erpc.xdcrpc.com", "https://rpc.ankr.com/xdc", "https://rpc.xinfin.network", "https://rpc.xdc.org"];
+        let rpcIdx = 0;
+        const CONTRACT_ADDR = "0x295a7aB79368187a6CD03c464cfaAb04d799784E";
+        const TOKEN_ADDRESSES = {
+            USDC: "0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1",
+            CGO: "0x8f9920283470f52128bf11b0c14e798be704fd15",
+            SRX: "0x5d5f074837f5d4618b3916ba74de1bf9662a3fed",
+            PLI: "0xff7412ea7c8445c46a8254dfb557ac1e48094391",
+            LBT: "0x05940b2df33d6371201e7ae099ced4c363855dfe",
+            FXD: "0x49d3f7543335cf38Fa10889CCFF10207e22110B5"
+        };
+        const TOKEN_DECIMALS = { USDC: 6, CGO: 18, SRX: 18, PLI: 18, LBT: 18, FXD: 18 };
+        const ADDRESS_TO_SYMBOL = Object.fromEntries(Object.entries(TOKEN_ADDRESSES).map(([s, a]) => [a.toLowerCase(), s]));
+        const els = {
+            connectBtn: document.getElementById('connectBtn'), sendBtn: document.getElementById('sendBtn'),
+            accountInfo: document.getElementById('accountInfo'), balanceInfo: document.getElementById('balanceInfo'),
+            txStatus: document.getElementById('txStatus'), donateStatus: document.getElementById('donateStatus'),
+            invoiceContainer: document.getElementById('invoiceContainer'), manualInvoice: document.getElementById('manualInvoice'),
+            fromDomain: document.getElementById('fromDomain'), toDomain: document.getElementById('toDomain'),
+            amount: document.getElementById('amount'), token: document.getElementById('token'),
+            quickDonateBtn: document.getElementById('quickDonateBtn'), donateAmount: document.getElementById('donateAmount'),
+            invoiceHash: document.getElementById('invoiceHash'), verifyHashBtn: document.getElementById('verifyHashBtn'),
+            invoiceFrom: document.getElementById('invoiceFrom'), invoiceTo: document.getElementById('invoiceTo'),
+            invoiceAmount: document.getElementById('invoiceAmount'), invoiceSymbol: document.getElementById('invoiceSymbol'),
+            generateInvoiceBtn: document.getElementById('generateInvoiceBtn')
+        };
+
+        function getRpc() { return RPC_POOL[rpcIdx % RPC_POOL.length]; }
+        function switchRpc() { rpcIdx++; console.warn('RPC switch to ' + getRpc()); }
+        function setDisconnected() {
+            els.accountInfo.innerText = t('wallet_not_connected'); els.balanceInfo.innerText = t('balance');
+            els.sendBtn.disabled = true; userAddress = null; signer = null; provider = null;
+        }
+        setDisconnected();
+        function truncate(a) { return a ? `${a.slice(0,6)}...${a.slice(-4)}` : ''; }
+
+        async function getDomainCategory(domain) {
+            if (!domain || domain.startsWith('0x')) return null;
+            try {
+                const r = await fetch(`${API_BASE}/api/info?domain=${encodeURIComponent(domain)}`);
+                if (r.ok) { const d = await r.json(); return d.category || null; }
+            } catch(e) {}
+            return null;
+        }
+
+        async function resolveDomain(domain) {
+            if (domain.startsWith('0x') && domain.length === 42) return domain;
+            try {
+                const r = await fetch(`${API_RESOLVE}?domain=${encodeURIComponent(domain)}`);
+                if (r.ok) { const d = await r.json(); if (d.result) return d.result; }
+            } catch(e) {}
+            for (let i = 0; i < RPC_POOL.length; i++) {
+                try {
+                    const p = new ethers.JsonRpcProvider(getRpc());
+                    const c = new ethers.Contract(CONTRACT_ADDR, ["function getAddress(string) view returns (address)"], p);
+                    const a = await c.getAddress(domain.toLowerCase().trim());
+                    if (a && a !== "0x0000000000000000000000000000000000000000") return a;
+                } catch(e) { switchRpc(); }
+            }
+            throw new Error(t('domain_not_resolved'));
+        }
+
+        async function fetchTxDetails(hash) {
+            if (!provider) provider = new ethers.JsonRpcProvider(getRpc());
+            const tx = await provider.getTransaction(hash);
+            if (!tx) throw new Error(t('transaction_not_found'));
+            let from = tx.from, to = tx.to, amount, symbol, nonce = tx.nonce;
+            if (tx.value && tx.value !== 0n) {
+                amount = parseFloat(ethers.formatEther(tx.value)); symbol = "XDC";
+            } else {
+                const rc = await provider.getTransactionReceipt(hash);
+                if (!rc?.logs) throw new Error(t('no_logs'));
+                const top = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+                let found = false;
+                for (const log of rc.logs) {
+                    if (log.topics[0] === top) {
+                        const sym = ADDRESS_TO_SYMBOL[log.address.toLowerCase()];
+                        if (!sym) continue;
+                        from = "0x" + log.topics[1].slice(26); to = "0x" + log.topics[2].slice(26);
+                        amount = Number(ethers.formatUnits(ethers.toBigInt(log.data), TOKEN_DECIMALS[sym]));
+                        symbol = sym; found = true; break;
+                    }
+                }
+                if (!found) throw new Error(t('no_transfer'));
+            }
+            const block = await provider.getBlock(tx.blockNumber);
+            const ts = new Date(block.timestamp * 1000).toISOString();
+            const short = hash.slice(2,10);
+            const invNum = `FDL-${new Date().getFullYear()}-${short}${nonce}`;
+            return { amount, symbol, from, to, invoiceNumber: invNum, timestampUTC: ts };
+        }
+
+        async function qrDataURL(data, size=150) {
+            const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
+            const blob = await (await fetch(url)).blob();
+            return new Promise(resolve => { const r = new FileReader(); r.onloadend = () => resolve(r.result); r.readAsDataURL(blob); });
+        }
+
+        async function displayInvoice(hash, amount, from, to, symbol, invNum, ts, catFrom=null, catTo=null) {
+            try {
+                if (catFrom === null && from && !from.startsWith('0x')) catFrom = await getDomainCategory(from);
+                if (catTo === null && to && !to.startsWith('0x')) catTo = await getDomainCategory(to);
+                const qr = await qrDataURL(JSON.stringify({ invoice: invNum, hash, from, to, amount, symbol, date: ts, explorer: `https://xdcscan.com/tx/${hash}` }));
+                const data = { facture: { numero: invNum, emetteur: from, categorie_emetteur: catFrom, destinataire: to, categorie_destinataire: catTo, montant: amount, devise: symbol, date: ts, hash, lien: `https://xdcscan.com/tx/${hash}` } };
+                const json = JSON.stringify(data, null, 2);
+                const html = `<pre style="white-space:pre-wrap;">${json}</pre><div class="qr-code-img"><img src="${qr}" alt="QR"></div>
+                    <div class="invoice-actions"><button class="copyJsonBtn">${t('copy_json')}</button><button class="copyHashBtn">${t('copy_hash')}</button><button id="saveBtn">${t('download_invoice')}</button></div>
+                    <div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${hash}" target="_blank">${t('view_on_xdcscan')}</a></div>`;
+                els.invoiceContainer.innerHTML = html; els.invoiceContainer.style.display = 'block';
+                els.invoiceContainer.querySelector('.copyJsonBtn').onclick = () => { navigator.clipboard.writeText(json); alert(t('json_copied')); };
+                els.invoiceContainer.querySelector('.copyHashBtn').onclick = () => { navigator.clipboard.writeText(hash); alert(t('hash_copied')); };
+                els.invoiceContainer.querySelector('#saveBtn').onclick = () => {
+                    const fc = els.invoiceContainer.querySelector('pre').outerHTML;
+                    const qrImg = els.invoiceContainer.querySelector('.qr-code-img img').src;
+                    const full = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ${invNum}</title><style>body{font-family:monospace;padding:20px;background:white}pre{white-space:pre-wrap}.qr-code-img{text-align:center;margin:20px 0}.qr-code-img img{width:150px;height:150px;border:1px solid #ddd;padding:5px}.hash-link{margin-top:20px;font-size:12px}</style></head><body>${fc}<div class="qr-code-img"><img src="${qrImg}"></div><div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${hash}">${t('view_on_xdcscan')}</a></div></body></html>`;
+                    const blob = new Blob([full], { type: "text/html" });
+                    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `facture_${invNum}.html`; a.click();
+                    alert(t('invoice_downloaded'));
+                };
+            } catch(e) { els.txStatus.innerHTML += `<br>${t('invoice_gen_failed')} ${e.message}`; }
+        }
+
+        async function donate(amt) {
+            if (!signer) return alert(t('connect_wallet'));
+            if (isNaN(amt) || amt <= 0) return;
+            els.donateStatus.innerHTML = "⏳ " + t('send') + "...";
+            try {
+                const target = await resolveDomain("fleursdelys.xdc");
+                const fromDisp = els.fromDomain.value || truncate(userAddress);
+                const tx = await signer.sendTransaction({ to: target, value: ethers.parseEther(amt.toString()) });
+                els.donateStatus.innerHTML = `${t('tx_sent')} ${tx.hash.slice(0,10)}...`;
+                await tx.wait();
+                els.donateStatus.innerHTML = `${t('donation_success')} ${amt} XDC ${t('donation_to')}`;
+                const d = await fetchTxDetails(tx.hash);
+                await displayInvoice(tx.hash, amt, fromDisp, 'fleursdelys.xdc', 'XDC', d.invoiceNumber, d.timestampUTC);
+            } catch(e) { els.donateStatus.innerHTML = '❌ ' + e.message; }
+        }
+
+        els.connectBtn.onclick = async () => {
+            if (!window.ethereum) return alert(t('install_wallet'));
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+                els.accountInfo.innerHTML = `✅ ${truncate(userAddress)}`;
+                els.balanceInfo.innerHTML = `💰 ${ethers.formatEther(await provider.getBalance(userAddress))} XDC`;
+                els.sendBtn.disabled = false;
+                window.ethereum.on('accountsChanged', () => location.reload());
+            } catch(e) { alert(e.message); setDisconnected(); }
+        };
+
+        els.quickDonateBtn.onclick = () => { const a = parseFloat(els.donateAmount.value); if (!isNaN(a) && a>0) donate(a); else alert(t('invalid_amount')); };
+        els.sendBtn.onclick = async () => {
+            const to = els.toDomain.value.trim(), amt = parseFloat(els.amount.value), tok = els.token.value, from = els.fromDomain.value.trim();
+            if (!to || isNaN(amt) || amt <= 0) return alert(t('fill_fields'));
+            if (!signer) return alert(t('connect_wallet'));
+            els.txStatus.innerHTML = t('verifying_sender');
+            try {
+                if (from && !from.startsWith('0x')) {
+                    const r = await resolveDomain(from);
+                    if (r.toLowerCase() !== userAddress.toLowerCase()) { els.txStatus.innerHTML = t('sender_mismatch'); return; }
+                }
+                const target = to.startsWith('0x') && to.length===42 ? to : await resolveDomain(to);
+                els.txStatus.innerHTML = `${t('sending')} ${amt} ${tok}...`;
+                let tx;
+                if (tok === "XDC") {
+                    tx = await signer.sendTransaction({ to: target, value: ethers.parseEther(amt.toString()) });
+                } else {
+                    const addr = TOKEN_ADDRESSES[tok]; if (!addr) throw new Error(t('token_not_supported'));
+                    const c = new ethers.Contract(addr, ["function transfer(address,uint256) returns (bool)"], signer);
+                    tx = await c.transfer(target, ethers.parseUnits(amt.toString(), TOKEN_DECIMALS[tok]));
+                }
+                els.txStatus.innerHTML += `<br>${t('tx_sent')} ${tx.hash.slice(0,10)}...`;
+                await tx.wait();
+                els.txStatus.innerHTML += `<br>${t('success')}`;
+                const fromDisp = from || truncate(userAddress);
+                const d = await fetchTxDetails(tx.hash);
+                await displayInvoice(tx.hash, amt, fromDisp, to, tok, d.invoiceNumber, d.timestampUTC);
+            } catch(e) { els.txStatus.innerHTML += `<br>❌ ${e.message}`; }
+        };
+
+        els.verifyHashBtn.onclick = async () => {
+            const h = els.invoiceHash.value.trim();
+            if (!h?.startsWith('0x') || h.length<66) return alert(t('invalid_hash'));
+            els.manualInvoice.style.display = 'none';
+            try {
+                if (!provider) provider = new ethers.JsonRpcProvider(getRpc());
+                const { amount, symbol, from, to, invoiceNumber, timestampUTC } = await fetchTxDetails(h);
+                els.invoiceAmount.value = amount; els.invoiceSymbol.value = symbol; els.invoiceSymbol.disabled = true;
+                els.invoiceFrom.value = from; els.invoiceTo.value = to;
+                alert(`${t('verified')} ${amount} ${symbol}`);
+                window._pendingManual = { hash:h, amount, symbol, from, to, invoiceNumber, timestampUTC, catFrom:null, catTo:null };
+            } catch(e) { alert(e.message); }
+        };
+
+        els.generateInvoiceBtn.onclick = async () => {
+            const p = window._pendingManual; if (!p) return alert(t('verify_first'));
+            const qr = await qrDataURL(JSON.stringify({ invoice: p.invoiceNumber, hash: p.hash, from: p.from, to: p.to, amount: p.amount, symbol: p.symbol, date: p.timestampUTC, explorer: `https://xdcscan.com/tx/${p.hash}` }));
+            const data = { facture: { numero: p.invoiceNumber, emetteur: p.from, categorie_emetteur: p.catFrom, destinataire: p.to, categorie_destinataire: p.catTo, montant: p.amount, devise: p.symbol, date: p.timestampUTC, hash: p.hash, lien: `https://xdcscan.com/tx/${p.hash}` } };
+            const json = JSON.stringify(data, null, 2);
+            const html = `<pre style="white-space:pre-wrap;">${json}</pre><div class="qr-code-img"><img src="${qr}" alt="QR"></div>
+                <div class="invoice-actions"><button class="copyJsonBtn">${t('copy_json')}</button><button class="copyHashBtn">${t('copy_hash')}</button><button id="saveBtn">${t('download_invoice')}</button></div>
+                <div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${p.hash}" target="_blank">${t('view_on_xdcscan')}</a></div>`;
+            els.manualInvoice.innerHTML = html; els.manualInvoice.style.display = 'block';
+            els.manualInvoice.querySelector('.copyJsonBtn').onclick = () => { navigator.clipboard.writeText(json); alert(t('json_copied')); };
+            els.manualInvoice.querySelector('.copyHashBtn').onclick = () => { navigator.clipboard.writeText(p.hash); alert(t('hash_copied')); };
+            els.manualInvoice.querySelector('#saveBtn').onclick = () => {
+                const fc = els.manualInvoice.querySelector('pre').outerHTML;
+                const qrImg = els.manualInvoice.querySelector('.qr-code-img img').src;
+                const full = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ${p.invoiceNumber}</title><style>body{font-family:monospace;padding:20px;background:white}pre{white-space:pre-wrap}.qr-code-img{text-align:center;margin:20px 0}.qr-code-img img{width:150px;height:150px;border:1px solid #ddd;padding:5px}.hash-link{margin-top:20px;font-size:12px}</style></head><body>${fc}<div class="qr-code-img"><img src="${qrImg}"></div><div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${p.hash}">${t('view_on_xdcscan')}</a></div></body></html>`;
+                const blob = new Blob([full], { type: "text/html" });
+                const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `facture_${p.invoiceNumber}.html`; a.click();
+                alert(t('invoice_downloaded'));
+            };
+        };
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+=== Historique des transactions ===
+12/06/2026 17:28:50 : Sortant 2.321 XDC (network.rwa → credits.bourse.xdc) [0xe74d0822fc98a91206ffe8d3d3b13fec69be0db957c3b2355e41c77b55714600]
+================================
+

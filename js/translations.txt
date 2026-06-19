@@ -1,0 +1,143 @@
+// js/translations.js – Traduction statique via fichiers JSON (sans API)
+(function() {
+    'use strict';
+
+    if (window.__translationsLoaded) return;
+    window.__translationsLoaded = true;
+
+    console.log('🔁 translations.js chargé');
+
+    const SUPPORTED_LANGS = {
+        'fr': 'Français',
+        'en': 'English',
+        'es': 'Español',
+        'de': 'Deutsch',
+        'zh': '中文',
+        'ru': 'Русский',
+        'ja': '日本語',
+        'vi': 'Tiếng Việt',
+        'th': 'ไทย',
+        'id': 'Bahasa Indonesia',
+        'pt': 'Português',
+        'ar': 'العربية'
+    };
+
+    let currentLang = 'fr';
+    let translations = {};
+
+    function detectLanguage() {
+        const saved = localStorage.getItem('preferred_lang');
+        if (saved && SUPPORTED_LANGS[saved]) {
+            console.log(`🌐 Langue depuis localStorage : ${saved}`);
+            return saved;
+        }
+        const browserLang = navigator.language.split('-')[0];
+        const detected = SUPPORTED_LANGS[browserLang] ? browserLang : 'fr';
+        console.log(`🌐 Langue détectée par navigateur : ${detected}`);
+        return detected;
+    }
+
+    async function loadTranslations(lang) {
+        try {
+            const url = `lang/${lang}.json`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            translations = data;
+            console.log(`✅ Traductions chargées pour ${lang}`);
+            return true;
+        } catch (e) {
+            console.warn(`⚠️ Impossible de charger ${lang}, fallback français :`, e);
+            // Fallback : charger le français
+            try {
+                const fallbackUrl = 'lang/fr.json';
+                const res = await fetch(fallbackUrl);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                translations = data;
+                console.log(`✅ Fallback français chargé`);
+                return true;
+            } catch (fb) {
+                console.error('❌ Aucune traduction disponible');
+                return false;
+            }
+        }
+    }
+
+    function applyTranslations() {
+        const elements = document.querySelectorAll('[data-i18n]');
+        elements.forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const text = translations[key];
+            if (text) {
+                // Si c'est un input ou textarea, on met dans placeholder
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                    if (el.hasAttribute('placeholder')) {
+                        el.setAttribute('placeholder', text);
+                    } else {
+                        el.textContent = text;
+                    }
+                } else {
+                    el.textContent = text;
+                }
+            }
+        });
+        console.log(`✅ ${elements.length} éléments traduits`);
+    }
+
+    function addLanguageSelector(lang) {
+        if (document.getElementById('langSelectorContainer')) return;
+        const target = document.querySelector('.header-card') || document.body;
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'langSelectorContainer';
+        wrapper.style.cssText = 'position:absolute;top:10px;right:20px;z-index:9999;display:flex;align-items:center;gap:5px;font-size:12px;';
+
+        const select = document.createElement('select');
+        select.style.cssText = 'background:#222;color:#fff;border:1px solid #555;padding:4px;border-radius:6px;cursor:pointer;';
+        for (const [code, name] of Object.entries(SUPPORTED_LANGS)) {
+            const opt = document.createElement('option');
+            opt.value = code;
+            opt.textContent = name;
+            if (code === lang) opt.selected = true;
+            select.appendChild(opt);
+        }
+        select.addEventListener('change', function(e) {
+            const newLang = e.target.value;
+            localStorage.setItem('preferred_lang', newLang);
+            location.reload();
+        });
+
+        wrapper.appendChild(document.createTextNode('🌐'));
+        wrapper.appendChild(select);
+        target.appendChild(wrapper);
+        console.log(`✅ Sélecteur de langue ajouté (${lang})`);
+    }
+
+    async function init() {
+        const lang = detectLanguage();
+        currentLang = lang;
+        const loaded = await loadTranslations(lang);
+        if (loaded) {
+            applyTranslations();
+        }
+        addLanguageSelector(lang);
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        init();
+    } else {
+        document.addEventListener('DOMContentLoaded', init);
+    }
+
+    // Exposer une fonction pour forcer une langue
+    window.forceTranslate = function(lang) {
+        if (!SUPPORTED_LANGS[lang]) {
+            console.error(`Langue "${lang}" non supportée`);
+            return;
+        }
+        localStorage.setItem('preferred_lang', lang);
+        location.reload();
+    };
+
+})();

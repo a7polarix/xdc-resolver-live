@@ -1,0 +1,39 @@
+=== HISTORIQUE DES TRANSACTIONS ===
+
+14/06/2026 03:32:47 | SORTANT | 130 XDC
+De: payments.coffee.depin
+À: coffee.rwa
+Hash: 0x9c50eaa7b0a198e399786719c735e5057655d381a9f5aadc93ab80a6df9bd6b9
+Lien (copier/coller dans navigateur): https://xdcscan.com/tx/0x9c50eaa7b0a198e399786719c735e5057655d381a9f5aadc93ab80a6df9bd6b9
+Valeur USDC au moment: 129.9802 USDC
+Catégories: invité → invité
+TVA: 20%
+----------------------------------------
+14/06/2026 18:17:43 | SORTANT | 1 XDC
+De: gold.russia.depin
+À: france.depin
+Hash: 0x7dbae0be5723985d4c63e7e27f56faf05242eae2ed134685c7dd41d8eb4c81c3
+Lien (copier/coller dans navigateur): https://xdcscan.com/tx/0x7dbae0be5723985d4c63e7e27f56faf05242eae2ed134685c7dd41d8eb4c81c3
+Valeur USDC au moment: 0.9998 USDC
+Catégories: invité → invité
+TVA: 20%
+----------------------------------------
+14/06/2026 20:42:36 | SORTANT | 1 XDC
+De: gold.russia.depin
+À: золото.xdc
+Hash: 0xc9596b6037abc26e0c7db4f4c702b5c04397a5630ad1b3a6088e6690a0c9b84a
+Lien (copier/coller dans navigateur): https://xdcscan.com/tx/0xc9596b6037abc26e0c7db4f4c702b5c04397a5630ad1b3a6088e6690a0c9b84a
+Valeur USDC au moment: 0.9998 USDC
+Catégories: invité → invité
+TVA: 20%
+----------------------------------------
+14/06/2026 20:44:03 | SORTANT | 1 NFT
+De: xdc.payments.rwa
+À: fleursdelys.xdc
+Hash: 0xc1a1e1a48fe62f7fc6cf1babc86be92000e45ae7355ddb8f5f089f84d0457dfd
+Lien (copier/coller dans navigateur): https://xdcscan.com/tx/0xc1a1e1a48fe62f7fc6cf1babc86be92000e45ae7355ddb8f5f089f84d0457dfd
+Valeur USDC au moment: 0.9998 USDC
+Catégories: invité → Lore & Mythes
+TVA: 20%
+----------------------------------------
+

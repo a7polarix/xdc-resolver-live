@@ -1,0 +1,12 @@
+{
+  "name": "fleurs-resolver",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@unstoppabledomains/resolution": "^9.3.3",
+    "@vercel/analytics": "^2.0.1",
+    "@xns/xnsjs": "^1.0.3",
+    "ethers": "^6.16.0",
+    "xrpl": "^4.6.0"
+  }
+}

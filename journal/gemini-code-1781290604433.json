@@ -1,0 +1,6 @@
+[
+  "STORY_NODE",
+  "Requiert identity.depin pour entrer. Test de difficulté DC12 via diceroll.depin.",
+  "['sanctuary.depin', 'deathnote.depin']",
+  "{'color': '#00ffc8', 'layer': 'foreground', 'effect': 'chromatic_glitch'}"
+]

@@ -1,0 +1,18 @@
+=== HISTORIQUE DES TRANSACTIONS ===
+
+12/06/2026 17:28:50 | SORTANT | 2.321 XDC
+De: network.rwa
+À: credits.bourse.xdc
+Hash: 0xe74d0822fc98a91206ffe8d3d3b13fec69be0db957c3b2355e41c77b55714600
+Lien (copier/coller dans navigateur): https://xdcscan.com/tx/0xe74d0822fc98a91206ffe8d3d3b13fec69be0db957c3b2355e41c77b55714600
+----------------------------------------
+12/06/2026 18:01:13 | SORTANT | 2.03 XDC
+De: энергия.rwa
+À: gold.russia.depin
+Hash: 0x5b8ad0ad3c5f4c84f9f4fe4071f26046501039697bd0c4ef455440f6dbb77a50
+Lien (copier/coller dans navigateur): https://xdcscan.com/tx/0x5b8ad0ad3c5f4c84f9f4fe4071f26046501039697bd0c4ef455440f6dbb77a50
+Valeur USDC au moment: 2.0293 USDC
+Catégories: invité → invité
+TVA: 20%
+----------------------------------------
+

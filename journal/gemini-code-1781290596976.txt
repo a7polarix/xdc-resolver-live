@@ -1,0 +1,24 @@
+[ ENTRÉE JOUEUR : tier0.xdc ]
+                     │
+                     ▼
+       [ ÉTAT ACTUEL : ex: gallia.xdc ] 
+                     │
+                     ├─> Lecture XDCScan : Quels sont les choix possibles (next_nodes) ?
+                     │
+                     ▼
+       [ ACTION : Déclenchement de diceroll.depin ]
+                     │
+    ┌────────────────┴────────────────┐
+    ▼                                 ▼
+[ ÉCHEC ]                         [ REUSSITE ]
+Contrainte : Aucun                 Vérification Inventaire :
+Calcul : physics.depin             Requête RWA (ex: gold.rwa > 0)
+    │                                 │
+    ▼                                 ▼
+Aiguillage ──> deathnote.depin     Aiguillage ──> sanctuary.depin
+    │                                 │
+    └────────────────┬────────────────┘
+                     ▼
+       [ RENDU VECTORIEL (master.html) ]
+       - Effet Spectrum (Vibration)
+       - Modification de la grille (Mathematics)

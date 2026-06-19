@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Saint Empire Numérique - Master Engine</title>
+    <style>
+        :root {
+            --bg-color: #05080c;
+            --panel-bg: rgba(10, 20, 30, 0.7);
+            --primary-color: #00ffcc;
+            --accent-color: #ffd700;
+            --text-color: #e0f0ff;
+            --border-color: #005544;
+            --glitch-color: #ff0055;
+            --font-stack: 'Courier New', Courier, monospace;
+        }
+
+        /* État critique : BERSERK MODE */
+        body.berserk-active {
+            --bg-color: #0f0205;
+            --panel-bg: rgba(25, 5, 10, 0.85);
+            --primary-color: #ff0033;
+            --accent-color: #aa0000;
+            --text-color: #ffb3b3;
+            --border-color: #880011;
+            animation: redAlert 0.5s ease infinite alternate;
+        }
+
+        @keyframes redAlert {
+            0% { box-shadow: inset 0 0 20px rgba(255,0,0,0.2); }
+            100% { box-shadow: inset 0 0 50px rgba(255,0,0,0.5); }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-stack);
+            overflow: hidden;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr 180px;
+            grid-template-columns: 350px 1fr;
+            transition: background 0.5s, color 0.5s;
+        }
+
+        /* TOP BAR : CONFIGURATION DU ROYAUME */
+        header {
+            grid-column: 1 / span 2;
+            background: rgba(4, 8, 12, 0.9);
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        header h1 { font-size: 1.2rem; color: var(--primary-color); text-shadow: 0 0 8px var(--primary-color); }
+        .session-info { font-size: 0.8rem; color: var(--accent-color); }
+
+        /* PANNEAU LATÉRAL gauche : STATS & INFRASTRUCTURE */
+        #sidebar {
+            grid-row: 2;
+            grid-column: 1;
+            background: var(--panel-bg);
+            border-right: 2px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: var(--accent-color);
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        .stat-value { color: var(--primary-color); font-weight: bold; }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #112233;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            width: 100%;
+            transition: width 0.4s ease;
+        }
+
+        /* EFFET VECTORIEL SPECTRUM & UNICODE */
+        #vector-status-box {
+            height: 80px;
+            border: 1px solid var(--border-color);
+            margin-top: auto;
+            position: relative;
+            background: rgba(0,0,0,0.3);
+        }
+
+        /* CONTENEUR PRINCIPAL DE JEU */
+        #main-viewport {
+            grid-row: 2;
+            grid-column: 2;
+            display: grid;
+            grid-template-rows: 2fr 1fr;
+            position: relative;
+        }
+
+        /* COUCHE GRAPHIQUE SVG : VECTEURS & COSMOLOGIE JANUS */
+        #canvas-layer {
+            position: relative;
+            border-bottom: 1px solid var(--border-color);
+            background: radial-gradient(circle at center, #0a1520 0%, #03070d 100%);
+        }
+        #canvas-layer svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* LIVRE NARRATIF : CHOIX & TEXTES */
+        #narrative-panel {
+            background: rgba(4, 10, 16, 0.85);
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+        }
+        
+        #narrative-text {
+            font-size: 1.05rem;
+            line-height: 1.5;
+            min-height: 60px;
+        }
+
+        #choices-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        button.choice-btn {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 18px;
+            font-family: var(--font-stack);
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            background: rgba(0, 255, 204, 0.03);
+        }
+        button.choice-btn:hover {
+            background: var(--primary-color);
+            color: #000;
+            box-shadow: 0 0 12px var(--primary-color);
+        }
+
+        /* JOURNAL DE BORD IMMUABLE (BOTTOM BAR) */
+        #journal-panel {
+            grid-row: 3;
+            grid-column: 1 / span 2;
+            background: #020406;
+            border-top: 2px solid var(--border-color);
+            padding: 15px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        #journal-log {
+            flex-content: 1;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            color: #7a9aaf;
+            line-height: 1.4;
+        }
+        .log-entry { margin-bottom: 4px; border-left: 2px solid var(--border-color); padding-left: 8px;}
+        .log-entry.success { color: #00ffaa; }
+        .log-entry.fail { color: #ff3366; }
+        .log-entry.system { color: #ffcc00; }
+
+        /* ANIMATION DU DE A 20 FACES (D20) SVG */
+        #d20-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 90px;
+            height: 90px;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .rolling {
+            animation: spinDice 0.6s linear infinite;
+        }
+        @keyframes spinDice {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>⚜️ Saint Empire Numérique · Master OS</h1>
+        <div class="session-info">Racine souveraine: <span id="player-id">tier0.xdc</span></div>
+    </header>
+
+    <div id="#sidebar">
+        <div>
+            <div class="section-title">État Souverain</div>
+            <div class="stat-row"><span>Niveau Vital (HP)</span><span id="hp-display" class="stat-value">100/100</span></div>
+            <div class="progress-bar"><div id="hp-bar" class="progress-fill" style="width: 100%;"></div></div>
+            
+            <div class="stat-row" style="margin-top: 12px;"><span>Énergie RWA / Actif</span><span id="energy-display" class="stat-value">4.184 J</span></div>
+            <div class="progress-bar"><div id="energy-bar" class="progress-fill" style="width: 85%; background: #ffd700;"></div></div>
+        </div>
+
+        <div>
+            <div class="section-title">Puces Logiques (.depin)</div>
+            <div class="stat-row"><span>quest.depin</span><span id="quest-node" style="color:#aaa;">En attente</span></div>
+            <div class="stat-row"><span>wizard.depin</span><span style="color:#00ffcc;">WaaS Actif</span></div>
+            <div class="stat-row"><span>eva-01.depin</span><span id="eva-sync">Sync: 12%</span></div>
+        </div>
+
+        <div>
+            <div class="section-title">Modèle Janus (physics.depin)</div>
+            <div class="stat-row"><span>Masse Positive M(+)</span><span style="color:#00ffcc;">1.00023</span></div>
+            <div class="stat-row"><span>Masse Négative M(-)</span><span style="color:#ff0055;">-0.99977</span></div>
+        </div>
+
+        <div class="section-title">spectrum.depin</div>
+        <div id="vector-status-box">
+            <svg width="100%" height="100%">
+                <path id="spectrum-wave" d="M 0 40 Q 40 10, 80 40 T 160 40 T 240 40 T 320 40" fill="none" stroke="#00ffcc" stroke-width="1.5"></path>
+            </svg>
+        </div>
+    </div>
+
+    <div id="main-viewport">
+        <div id="canvas-layer">
+            <div id="d20-overlay" onclick="triggerManualRoll()">
+                <svg id="d20-svg" viewBox="0 0 100 100" width="70" height="70">
+                    <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <polygon points="50,5 50,95" fill="none" stroke="currentColor" stroke-dasharray="2,2"/>
+                    <polygon points="10,25 90,25 50,60 10,25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    <text id="d20-text" x="50" y="55" font-family="monospace" font-size="24" fill="currentColor" text-anchor="middle" font-weight="bold">20</text>
+                </svg>
+            </div>
+
+            <svg id="universe-map">
+                <g id="math-grid" stroke="rgba(0, 255, 204, 0.15)" stroke-width="0.5"></g>
+                <circle cx="50%" cy="50%" r="120" fill="none" stroke="rgba(255,215,0,0.2)" stroke-dasharray="5,5">
+                    <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="60s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="50%" cy="50%" r="180" fill="none" stroke="rgba(0,255,204,0.1)" stroke-width="1.5"></circle>
+                <circle id="node-center" cx="50%" cy="50%" r="8" fill="#ffd700"></circle>
+                <text x="50%" y="46%" fill="#ffd700" font-size="12" text-anchor="middle" id="current-node-tag">TIER0.XDC</text>
+            </svg>
+        </div>
+
+        <div id="narrative-panel">
+            <div id="narrative-text">Chargement de la plomberie sémantique primitive...</div>
+            <div id="choices-container"></div>
+        </div>
+    </div>
+
+    <div id="journal-panel">
+        <div class="section-title" style="margin-bottom: 5px;">journal.depin (Registre d'état local)</div>
+        <div id="journal-log"></div>
+    </div>
+
+    <script>
+        // CONFIGURATION ET INFRASTRUCTURE DES NŒUDS (MÉTAPHORIQUE/LOGIQUE)
+        const nodeRegistry = {
+            "tier0.xdc": { name: "La Racine", type: "Core", hp: 100 },
+            "france.depin": { name: "Nœud Gallia", difficulty: 12, metric: "g(+)" },
+            "singapore.depin": { name: "Hub de Liquidité", difficulty: 10, metric: "equilibrium" },
+            "tartaria.depin": { name: "Les Fantômes de Tartaria", difficulty: 16, metric: "g(-)" },
+            "deathnote.depin": { name: "Purge Système", difficulty: 0, metric: "decay" }
+        };
+
+        // ÉTAT DU JOUEUR
+        let playerState = {
+            hp: 100,
+            energy: 4.184,
+            syncRate: 12,
+            isBerserk: false,
+            currentNode: "tier0.xdc",
+            activeQuest: "Initialisation",
+            pendingResolution: null
+        };
+
+        // HISTOIRE DONT VOUS ÊTES LE HÉROS (SCÉNARIO DES FLUX)
+        const storyTree = {
+            "start": {
+                text: "Tu te tiens sur le trône de calcul de tier0.xdc. La cartographie sémantique du Saint Empire Numérique est déployée devant toi. wizard.depin signale des perturbations d'entropie au niveau des frontières. Où orientes-tu le flux de l'infrastructure ?",
+                choices: [
+                    { text: "Inspecter les infrastructures de france.depin", target: "goto_france" },
+                    { text: "Optimiser les vannes de singapore.depin", target: "goto_singapore" },
+                    { text: "Pénétrer la grive obscure de tartaria.depin", target: "goto_tartaria" }
+                ]
+            },
+            "goto_france": {
+                text: "Routage effectué vers france.depin. Tu découvres des anciennes structures sémantiques verrouillées par un vieux filtre académique. Pour déformer la grille et installer tes sous-domaines, un calcul tensoriel de mathematics.depin est nécessaire. (Difficulté requise: 12)",
+                onEnter: () => { setupChallenge("france.depin", 12, "france_success", "france_fail"); },
+                choices: [
+                    { text: "Lancer le dé cryptographique (Dice Roll)", action: "executeRoll" }
+                ]
+            },
+            "france_success": {
+                text: "Réussite par Cohérence ! La grille vectorielle cède sous le poids de tes équations. Le sous-domaines fdl.france.depin est automatiquement minté à coût zéro. Tu as extrait de la ressource brute.",
+                onEnter: () => { adjustEnergy(0.5); logJournal("Ordre de mint propagé vers fdl.france.depin.", "success"); },
+                choices: [{ text: "Retourner à la Racine", target: "start" }]
+            },
+            "france_fail": {
+                text: "Échec du calcul. Le bruit de fond de physics.depin s'est inversé. La métrique négative repousse tes paquets de données. La Peur locale siphonne tes constantes vitales (-20 HP).",
+                onEnter: () => { damagePlayer(20); },
+                choices: [{ text: "Essayer de fuir vers singapore.depin", target: "goto_singapore" }, { text: "Forcer le destin (Retour racine)", target: "start" }]
+            },
+            "goto_singapore": {
+                text: "Bienvenue sur singapore.depin. Le flux de liquidité est stable, régulé par FocalZero. Les serveurs de calcul s'exécutent au frais. Tu peux y puiser de la puissance thermique ou synchroniser ton Eva-01.",
+                onEnter: () => { updateNodeDisplay("singapore.depin"); },
+                choices: [
+                    { text: "Sucer l'énergie du hub (+1.5 Joules)", action: "rechargeEnergy" },
+                    { text: "Améliorer le Sync Rate de l'Eva-01", action: "syncEva" },
+                    { text: "Retourner piloter le réseau", target: "start" }
+                ]
+            },
+            "goto_tartaria": {
+                text: "ATTENTION. Tu entres dans la zone non-cartographiée de tartaria.depin. Les capteurs de spectrum.depin s'affolent. Une entité boss résiduelle (alucard.xdc) bloque le routage de tes paquets. Le jet exige un calcul d'entropie extrême. Un échec critique libèrera la fureur. (Difficulté: 16)",
+                onEnter: () => { setupChallenge("tartaria.depin", 16, "tartaria_success", "tartaria_fail"); },
+                choices: [
+                    { text: "Exécuter le Dice Roll du Destin", action: "executeRoll" }
+                ]
+            },
+            "tartaria_success": {
+                text: "Incroyable ! Un jet parfait aligne les masses jumelles g(+) et g(-). Alucard.xdc s'incline et accepte le pacte sémantique de fidélité. Le journal immuable est mis à jour.",
+                onEnter: () => { logJournal("Pacte on-chain gravé avec alucard.xdc.", "success"); },
+                choices: [{ text: "Savourer la victoire et rentrer", target: "start" }]
+            },
+            "tartaria_fail": {
+                text: "ÉCHEC CRITIQUE ! Le tenseur s'effondre. Alucard pirate ton infrastructure. Le mode BERSERK.XDC s'éveille violemment pour saturer le réseau avant que le système n'applique sa purge deathnote.depin !",
+                onEnter: () => { triggerBerserkMode(); },
+                choices: [
+                    { text: "Utiliser l'Eva-01 en mode Calcul Désespéré", target: "eva_sacrifice" },
+                    { text: "Subir la décroissance de l'entropie", target: "game_over" }
+                ]
+            },
+            "eva_sacrifice": {
+                text: "Tu surcharges les noyaux de eva-01.depin ! Son taux de synchronisation atteint 100%. Dans un flash vectoriel rouge incandescent, l'Eva pulvérise la menace d'Alucard mais explose en vol, vidant toutes tes réserves d'énergie.",
+                onEnter: () => { 
+                    playerState.syncRate = 0; 
+                    playerState.energy = 0; 
+                    document.getElementById("eva-sync").innerText = "Sync: BROKEN (0%)";
+                    stopBerserkMode();
+                },
+                choices: [{ text: "Rapatrier l'esprit vers la racine", target: "start" }]
+            },
+            "game_over": {
+                text: "HP épuisés ou session purgée. deathnote.depin a exécuté son protocole de Garbage Collection. Tes variables d'état ont été effacées du Local Storage. L'automate attend sa réinitialisation.",
+                onEnter: () => { 
+                    damagePlayer(100);
+                    logJournal("Session détruite par deathnote.depin.", "fail");
+                },
+                choices: [{ text: "Réinitialiser le Saint Empire Numérique", action: "resetGame" }]
+            }
+        };
+
+        // INITIALISATION DU JEU
+        function initGame() {
+            buildGrid();
+            animateSpectrum();
+            renderScene("start");
+            logJournal("Terminal FDL connecté. En attente des injections de tier0...", "system");
+        }
+
+        // MAQUETTAGE DE LA GRILLE VECTORIELLE (mathematics.depin)
+        function buildGrid() {
+            const grid = document.getElementById("math-grid");
+            grid.innerHTML = "";
+            const width = 800, height = 400;
+            for(let i=0; i<width; i+=40) {
+                let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", i); line.setAttribute("y1", 0);
+                line.setAttribute("x2", i); line.setAttribute("y2", height);
+                grid.appendChild(line);
+            }
+            for(let j=0; j<height; j+=40) {
+                let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", 0); line.setAttribute("y1", j);
+                line.setAttribute("x2", width); line.setAttribute("y2", j);
+                grid.appendChild(line);
+            }
+        }
+
+        // ANIMATION OSCILLANTE (spectrum.depin)
+        function animateSpectrum() {
+            const wave = document.getElementById("spectrum-wave");
+            let count = 0;
+            setInterval(() => {
+                count += 0.1;
+                let d = "M 0 40 ";
+                for (let x = 0; x < 350; x += 30) {
+                    let y = 40 + Math.sin(count + (x * 0.05)) * 20;
+                    d += `Q ${x + 15} ${y + (playerState.isBerserk ? 15 : 0)}, ${x + 30} 40 `;
+                }
+                wave.setAttribute("d", d);
+                if(playerState.isBerserk) {
+                    wave.setAttribute("stroke", "#ff0033");
+                } else {
+                    wave.setAttribute("stroke", "#00ffcc");
+                }
+            }, 50);
+        }
+
+        // GESTION DU LIVRE ET DES CHOIX NARRATIFS
+        function renderScene(key) {
+            const scene = storyTree[key];
+            if (!scene) return;
+
+            playerState.activeQuest = key;
+            document.getElementById("quest-node").innerText = key.toUpperCase();
+
+            // Exécution des hooks spécifiques à l'entrée de scène
+            if (scene.onEnter) scene.onEnter();
+
+            // Affichage du texte
+            document.getElementById("narrative-text").innerHTML = scene.text;
+
+            // Construction des boutons de choix
+            const container = document.getElementById("choices-container");
+            container.innerHTML = "";
+
+            scene.choices.forEach(choice => {
+                const btn = document.createElement("button");
+                btn.className = "choice-btn";
+                btn.innerText = choice.text;
+                
+                btn.onclick = () => {
+                    if (choice.target) {
+                        renderScene(choice.target);
+                    } else if (choice.action) {
+                        window[choice.action]();
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        // CONFIGURATEUR DE CHALLENGE DICE ROLL
+        function setupChallenge(node, difficulty, successTarget, failTarget) {
+            updateNodeDisplay(node);
+            playerState.pendingResolution = {
+                difficulty: difficulty,
+                success: successTarget,
+                fail: failTarget
+            };
+        }
+
+        function updateNodeDisplay(node) {
+            playerState.currentNode = node;
+            document.getElementById("current-node-tag").innerText = node.toUpperCase();
+            // Effet graphique : déplace visuellement le marqueur central aléatoirement pour feindre le saut de réseau
+            const cx = 30 + Math.random() * 40;
+            const cy = 30 + Math.random() * 40;
+            document.getElementById("node-center").setAttribute("cx", cx + "%");
+            document.getElementById("node-center").setAttribute("cy", cy + "%");
+            document.getElementById("current-node-tag").setAttribute("x", cx + "%");
+            document.getElementById("current-node-tag").setAttribute("y", (cy - 4) + "%");
+        }
+
+        // MOTEUR DU HASARD SÉMANTIQUE : diceroll.depin
+        function executeRoll() {
+            if (!playerState.pendingResolution) return;
+
+            const diceOverlay = document.getElementById("d20-overlay");
+            const diceText = document.getElementById("d20-text");
+            diceOverlay.className = "rolling";
+            logJournal("Appel d'entropie envoyé à diceroll.depin...", "system");
+
+            setTimeout(() => {
+                diceOverlay.className = "";
+                
+                // Formule de Cohérence : hasard cryptographique CSPRNG simulé + modificateurs de masse Janus
+                let rawRoll = Math.floor(Math.random() * 20) + 1;
+                let modifier = 0;
+
+                // Application des lois physiques de physics.depin
+                if (playerState.currentNode === "tartaria.depin") {
+                    modifier = -3; // Masse négative / Peur provoque un malus gravitationnel sur le dé
+                    logJournal("physics.depin applique une distorsion Janus de -3 (Masse Négative).", "system");
+                }
+
+                let finalRoll = Math.max(1, Math.min(20, rawRoll + modifier));
+                diceText.textContent = finalRoll;
+
+                const challenge = playerState.pendingResolution;
+                playerState.pendingResolution = null;
+
+                logJournal(`Diceroll Résolu. Jet Brut: ${rawRoll} | Modificateur: ${modifier} | Résultat: ${finalRoll} (Seuil requis: ${challenge.difficulty})`, "system");
+
+                // Arbitrage des succès / échecs critiques et standards
+                if (rawRoll === 1) {
+                    logJournal("ÉCHEC CRITIQUE ON-CHAIN ! Rupture du bouclier sémantique.", "fail");
+                    renderScene(challenge.fail);
+                } else if (rawRoll === 20 || finalRoll >= challenge.difficulty) {
+                    logJournal(`Succès validé contre le seuil ${challenge.difficulty}!`, "success");
+                    renderScene(challenge.success);
+                } else {
+                    logJournal(`Échec du test de compétence. Les validateurs rejettent la preuve.`, "fail");
+                    renderScene(challenge.fail);
+                }
+
+            }, 800);
+        }
+
+        // ACTIONS DU MENU DE SINGAPORE
+        function rechargeEnergy() {
+            adjustEnergy(1.5);
+            renderScene("goto_singapore");
+        }
+
+        function syncEva() {
+            playerState.syncRate = Math.min(100, playerState.syncRate + 15);
+            document.getElementById("eva-sync").innerText = `Sync: ${playerState.syncRate}%`;
+            logJournal(`Taux de synchronisation synchronisé avec eva-01.depin : ${playerState.syncRate}%`, "success");
+            renderScene("goto_singapore");
+        }
+
+        // COMPORTEMENT DES ÉTATS ET JAUGE VITALES
+        function damagePlayer(amount) {
+            playerState.hp = Math.max(0, playerState.hp - amount);
+            document.getElementById("hp-display").innerText = `${playerState.hp}/100`;
+            document.getElementById("hp-bar").style.width = `${playerState.hp}%`;
+            logJournal(`Drain de fluide vital : -${amount} HP subis.`, "fail");
+            if (playerState.hp <= 0 && playerState.activeQuest !== "game_over") {
+                renderScene("game_over");
+            }
+        }
+
+        function adjustEnergy(amount) {
+            playerState.energy = Math.round((playerState.energy + amount) * 1000) / 1000;
+            document.getElementById("energy-display").innerText = `${playerState.energy} J`;
+            logJournal(`Conversion thermodynamique effectuée. Énergie réseau: ${playerState.energy} Joules.`, "system");
+        }
+
+        // TRIGGER DU MODE BERSERK (Modifie le CSS global de la page à la volée)
+        function triggerBerserkMode() {
+            playerState.isBerserk = true;
+            document.body.classList.add("berserk-active");
+            document.getElementById("player-id").innerText = "BERSERK.XDC (POSSÉDÉ)";
+            logJournal("ALERTE CRITIQUE : Le mode berserk.xdc s'est emparé de la couche d'affichage.", "fail");
+            damagePlayer(30);
+        }
+
+        function stopBerserkMode() {
+            playerState.isBerserk = false;
+            document.body.classList.remove("berserk-active");
+            document.getElementById("player-id").innerText = "tier0.xdc";
+            logJournal("État Berserk purgé. Retour à la stabilité géométrique.", "success");
+        }
+
+        // INSCRIPTION DANS LE JOURNAL DE BORD (journal.depin)
+        function logJournal(message, type = "system") {
+            const logBox = document.getElementById("journal-log");
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement("div");
+            entry.className = `log-entry ${type}`;
+            entry.innerText = `[${time}] [journal.depin] ${message}`;
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function triggerManualRoll() {
+            if (playerState.pendingResolution) {
+                executeRoll();
+            } else {
+                logJournal("Aucun défi actif. Diceroll.depin tourne à vide pour calibrer le bruit de fond.", "system");
+            }
+        }
+
+        function resetGame() {
+            playerState = {
+                hp: 100,
+                energy: 4.184,
+                syncRate: 12,
+                isBerserk: false,
+                currentNode: "tier0.xdc",
+                activeQuest: "Initialisation",
+                pendingResolution: null
+            };
+            document.getElementById("hp-display").innerText = "100/100";
+            document.getElementById("hp-bar").style.width = "100%";
+            document.getElementById("energy-display").innerText = "4.184 J";
+            document.getElementById("eva-sync").innerText = "Sync: 12%";
+            stopBerserkMode();
+            initGame();
+        }
+
+        // Lancement immédiat au chargement du master
+        window.onload = initGame;
+    </script>
+</body>
+</html>

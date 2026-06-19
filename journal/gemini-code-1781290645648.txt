@@ -1,0 +1,4 @@
+[ARCADIA CORE SYSTEM] ── MAIN ENGINE: ONLINE
+   ├── [VOLTAGE] : OK (Driven by compute.xdc)
+   ├── [INJECTORS] : tier0 (Ready) | alucard (Contained) | focalzero (Calibrated)
+   └── [MAINTENANCE_BOT] : Toshiro (Active)

@@ -1,0 +1,7 @@
+overrides:
+  ws: ">=8.20.1"
+auditConfig:
+  ignoreGhsas:
+    - GHSA-848j-6mx2-7j84
+allowBuilds:
+  tiny-secp256k1: true

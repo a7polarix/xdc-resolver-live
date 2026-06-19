@@ -1,0 +1,174 @@
+{
+  "sem_master_index": {
+    "version": "2.0.26",
+    "system_origin": "tier0.xdc",
+    "architecture_style": "vectorial_with_effects",
+    "nodes": {
+      "mathematics.depin": {
+        "type": "System_Law_Engine",
+        "function_core": "Régir la topologie de l'espace d'état et déformer les champs de probabilité.",
+        "real_world_laws": [
+          "Distribution non-euclidienne des probabilités (courbure sémantique)",
+          "Matrices de transformation matricielle pour le rendu des coordonnées vectorielles",
+          "Calcul tensoriel appliqué aux interactions de proximité inter-domaines"
+        ],
+        "vector_effects": {
+          "layer": "background_grid",
+          "render_mode": "canvas_dynamic_mesh",
+          "effect_type": "gravitational_warp_on_click",
+          "stroke_weight": "0.5px"
+        }
+      },
+      "physics.depin": {
+        "type": "Cosmological_Engine",
+        "function_core": "Simulation d'environnement basée sur le modèle cosmologique Janus (masses jumelles).",
+        "real_world_laws": [
+          "Équation de champ sans matière noire ni énergie noire",
+          "Inversion de la flèche du temps pour le secteur de masse négative",
+          "Équilibre hydrostatique des fluctuations gravitationnelles g(+)/g(-)"
+        ],
+        "vector_effects": {
+          "layer": "particle_system",
+          "render_mode": "twin_layered_vector",
+          "effect_type": "anti_matter_repulsion_particles",
+          "color_profile": {
+            "positive_mass": "rgba(0, 255, 200, 0.8)",
+            "negative_mass": "rgba(255, 0, 100, 0.5)"
+          }
+        }
+      },
+      "energy.depin": {
+        "type": "Thermodynamic_Service",
+        "function_core": "Mesure du coût de travail réel et de la densité d'entropie (DePIN = Service).",
+        "real_world_laws": [
+          "Première et deuxième lois de la thermodynamique appliquées aux cycles de calcul",
+          "Liaison d'infrastructure : RWA (Actif) converti en puissance de traitement (Service)",
+          "Dissipation thermique théorique par octet traité"
+        ],
+        "vector_effects": {
+          "layer": "interface_glow",
+          "render_mode": "svg_linear_gradient",
+          "effect_type": "dynamic_opacity_based_on_load",
+          "refresh_rate_ms": 100
+        }
+      },
+      "spectrum.depin": {
+        "type": "Vibrational_State_Filter",
+        "function_core": "Définir l'état d'un élément ou d'un domaine au sein du spectre des fréquences.",
+        "real_world_laws": [
+          "Analyse de Fourier pour la décomposition des ondes et des signaux",
+          "Loi de déplacement de Wien (température / couleur de la vibration)",
+          "Résonance harmonique entre les nœuds connectés"
+        ],
+        "vector_effects": {
+          "layer": "waveform_overlay",
+          "render_mode": "svg_path_morphing",
+          "effect_type": "frequency_oscillation_bloom",
+          "frequency_range_hz": [20, 20000]
+        }
+      },
+      "logos.depin": {
+        "type": "Semantic_Routing_Table",
+        "function_core": "Ordonner le sens, la logique des structures de données et le verbe originel.",
+        "real_world_laws": [
+          "Arbres de décisions sémantiques et graphes relationnels d'ontologie",
+          "Normalisation des concepts pour l'indexation on-chain",
+          "Vérification de cohérence lexicale avant exécution de script"
+        ],
+        "vector_effects": {
+          "layer": "text_hud",
+          "render_mode": "monospaced_matrix_rain",
+          "effect_type": "lexical_fade_in_out",
+          "font_family": "Courier New"
+        }
+      },
+      "library.depin": {
+        "type": "Knowledge_Vault",
+        "function_core": "Index centralisé des tables de routage académiques et des archives de savoir.",
+        "real_world_laws": [
+          "Structure de données immuable de type arbre de Merkle",
+          "Classification thématique décimale pour le stockage sémantique",
+          "Persistance des métadonnées liées aux pointeurs Arweave"
+        ],
+        "vector_effects": {
+          "layer": "ui_menu",
+          "render_mode": "hierarchical_tree_node",
+          "effect_type": "isometric_box_stack",
+          "interactivity": "expand_on_hover"
+        }
+      },
+      "encyclopedia.depin": {
+        "type": "Alternative_Knowledge_Router",
+        "function_core": "Registre des définitions du monde réel, des concepts dissidents et officiels.",
+        "real_world_laws": [
+          "Cartographie croisée des paradigmes scientifiques et historiques",
+          "Liaison sémantique hypertexte entre entités physiques (IRL Index)",
+          "Gestion de la redondance des données historiques"
+        ],
+        "vector_effects": {
+          "layer": "ui_overlay",
+          "render_mode": "floating_hologram_cards",
+          "effect_type": "chromatic_aberration_glitch"
+        }
+      },
+      "pinyin.depin": {
+        "type": "Phonetic_Localization_Core",
+        "function_core": "Traduction, phonétique, romanisation et structure des clés de tri linguistiques orientales.",
+        "real_world_laws": [
+          "Algorithmes de conversion des sinogrammes en fréquences syllabiques",
+          "Système à 4 tons mappé sur 4 modificateurs d'ondes mathématiques",
+          "Indexation lexicale selon les radicaux Unicode"
+        ],
+        "vector_effects": {
+          "layer": "text_hud",
+          "render_mode": "vertical_scroll_text",
+          "effect_type": "tonal_pitch_shake"
+        }
+      },
+      "unicode.depin": {
+        "type": "Character_Registry_Shield",
+        "function_core": "Garantir l'affichage universel des symboles, glyphes sacrés et caractères du jeu.",
+        "real_world_laws": [
+          "Standard d'encodage UTF-8/UTF-16 pour l'intégrité de la table de caractères",
+          "Mappage hexadécimal des symboles ésotériques et alchimiques",
+          "Protection contre l'altération ou la corruption des chaînes JSON on-chain"
+        ],
+        "vector_effects": {
+          "layer": "border_frame",
+          "render_mode": "procedural_glyph_border",
+          "effect_type": "matrix_symbol_cycling"
+        }
+      },
+      "zodiac.xdc": {
+        "type": "Temporal_Cycle_Registry",
+        "function_core": "Calculer le temps de l'Empire, les révolutions astronomiques et les cycles d'influence.",
+        "real_world_laws": [
+          "Calcul d'éphémérides réelles basées sur la mécanique céleste",
+          "Division angulaire stricte de 30 degrés par secteur de coordonnées spatiales",
+          "Horloge astronomique calée sur le timestamp d'Unix et des blocs XDC"
+        ],
+        "vector_effects": {
+          "layer": "foreground_hud",
+          "render_mode": "concentric_rings_svg",
+          "effect_type": "slow_rotational_sync",
+          "dash_array": "5, 5"
+        }
+      },
+      "deathnote.depin": {
+        "type": "Entropy_Decay_Lifecycle",
+        "function_core": "Gérer l'extinction des variables, la purge des états obsolètes et la fin de vie des sessions.",
+        "real_world_laws": [
+          "Loi de décroissance radioactive exponentielle pour la fin de validité des tokens",
+          "Protocole de nettoyage de la mémoire vive (Garbage Collection logique)",
+          "Archivage définitif des signatures et hachages révoqués"
+        ],
+        "vector_effects": {
+          "layer": "screen_filter",
+          "render_mode": "vignette_shadow_map",
+          "effect_type": "smoke_dissolve_on_delete",
+          "blend_mode": "multiply"
+        }
+      }
+    }
+  }
+}

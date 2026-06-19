@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleurs de Lys API – QR ticket</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #eef2f5; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; padding: 2rem 1rem; color: #1e2a3a; }
+        .container { max-width: 720px; margin: 0 auto; }
+        .card { background: #ffffff; border-radius: 24px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e4e9ef; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+        h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; background: linear-gradient(135deg, #1e2a3a, #2c3e4e); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .sub { font-size: 0.75rem; color: #5c6f87; margin-top: 0.2rem; }
+        .donate-line { display: flex; align-items: center; gap: 0.75rem; background: #f4f6fa; padding: 0.4rem 0.8rem; border-radius: 48px; }
+        .donate-line span { font-weight: 500; color: #2c3e4e; }
+        .donate-line input { width: 90px; padding: 0.4rem 0.6rem; border-radius: 40px; border: 1px solid #cfdde6; background: white; font-size: 0.85rem; text-align: center; }
+        .donate-line button { background: #e2e8f0; border: none; padding: 0.4rem 1rem; border-radius: 40px; font-weight: 500; cursor: pointer; color: #1e2a3a; transition: background 0.2s; }
+        .donate-line button:hover { background: #cbd5e1; }
+        .inline-status { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        button { background: #e2e8f0; border: none; padding: 0.5rem 1.2rem; border-radius: 40px; font-weight: 500; cursor: pointer; color: #1e2a3a; transition: all 0.2s; }
+        button:active { transform: scale(0.97); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.primary { background: #2c3e4e; color: white; }
+        button.primary:hover { background: #1e2a3a; }
+        .status { background: #f4f6fa; padding: 0.5rem 1rem; border-radius: 40px; font-size: 0.8rem; color: #2c3e4e; word-break: break-all; }
+        .row { display: flex; gap: 1rem; margin: 1rem 0; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 160px; }
+        label { display: block; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: #5c6f87; margin-bottom: 0.3rem; }
+        input, select { width: 100%; padding: 0.7rem 0.9rem; border-radius: 48px; border: 1px solid #cfdde6; background: white; font-size: 0.9rem; transition: border 0.2s; }
+        input:focus, select:focus { outline: none; border-color: #8ba0b5; }
+        small { font-size: 0.7rem; color: #7a8a9e; display: block; margin-top: 0.25rem; }
+        .invoice { background: #fafcfd; border-radius: 20px; padding: 1rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-word; border: 1px solid #e4e9ef; margin-top: 1rem; }
+        .invoice-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
+        .invoice-actions button { background: #edf2f7; font-size: 0.7rem; padding: 0.3rem 0.8rem; }
+        .hash-link { margin-top: 0.6rem; font-size: 0.7rem; }
+        footer { text-align: center; font-size: 0.7rem; color: #8ba0b5; margin-top: 2rem; }
+        .qr-code-img { margin-top: 1rem; text-align: center; }
+        .qr-code-img img { width: 150px; height: 150px; border: 1px solid #ddd; padding: 5px; background: white; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.16.0/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="header-flex">
+            <div>
+                <h1>🌿 Fleurs de Lys</h1>
+                <div class="sub">résolveur .xdc · .rwa · .depin</div>
+            </div>
+            <div class="donate-line">
+                <span>💝 don</span>
+                <input type="number" id="donateAmount" placeholder="montant" step="any" value="1">
+                <button id="quickDonateBtn">envoyer</button>
+            </div>
+        </div>
+        <div class="inline-status">
+            <button id="connectBtn">🔌 connecter</button>
+            <div id="accountInfo" class="status">wallet : non connecté</div>
+            <div id="balanceInfo" class="status">solde : --</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 1rem; font-weight: 500;">✎ envoyer à un domaine</h3>
+        <div class="row">
+            <div class="col">
+                <label>depuis (domaine)</label>
+                <input type="text" id="fromDomain" placeholder="ex: fleursdelys.xdc">
+                <small>optionnel</small>
+            </div>
+            <div class="col">
+                <label>vers (domaine ou adresse)</label>
+                <input type="text" id="toDomain" placeholder="ex: gold.xdc">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label>montant</label>
+                <input type="number" id="amount" placeholder="montant" step="any">
+            </div>
+            <div class="col">
+                <label>devise</label>
+                <select id="token">
+                    <option value="XDC">XDC (natif)</option>
+                    <option value="USDC">USDC</option>
+                    <option value="CGO">CGO (Comtech Gold)</option>
+                    <option value="SRX">SRX (StorX)</option>
+                    <option value="PLI">PLI (Plugin)</option>
+                    <option value="LBT">LBT (Law Blocks)</option>
+                    <option value="FXD">FXD (Fathom Dollar)</option>
+                </select>
+            </div>
+        </div>
+        <button id="sendBtn" disabled>📤 envoyer</button>
+        <div id="txStatus" class="status" style="margin-top: 1rem;"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 0.75rem; font-weight: 500;">🧾 facture récente</h3>
+        <div id="donateStatus" class="status" style="background: #f4f6fa;"></div>
+        <div id="invoiceContainer" class="invoice" style="display: none;"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 0.75rem; font-weight: 500;">🔍 générer facture depuis un hash</h3>
+        <input type="text" id="invoiceHash" placeholder="hash de transaction (0x...)" style="margin-bottom: 0.5rem;">
+        <button id="verifyHashBtn" style="width: auto;">vérifier le hash</button>
+        <div style="display: flex; gap: 0.8rem; margin-top: 1rem;">
+            <input type="text" id="invoiceFrom" placeholder="émetteur (adresse)" readonly style="flex:1; background:#f8fafc;">
+            <input type="text" id="invoiceTo" placeholder="destinataire (adresse)" readonly style="flex:1; background:#f8fafc;">
+        </div>
+        <div style="display: flex; gap: 0.8rem; margin-top: 0.8rem;">
+            <input type="number" id="invoiceAmount" placeholder="montant" step="any" readonly style="flex:2; background:#f8fafc;">
+            <select id="invoiceSymbol" disabled style="flex:1;">
+                <option>XDC</option><option>USDC</option><option>CGO</option><option>SRX</option><option>PLI</option><option>LBT</option><option>FXD</option>
+            </select>
+        </div>
+        <button id="generateInvoiceBtn" style="margin-top: 1rem;">générer la facture</button>
+        <div id="manualInvoice" class="invoice" style="display: none; margin-top: 1rem;"></div>
+    </div>
+
+    <footer>© 2026 FocalZero – résolveur décentralisé</footer>
+</div>
+
+<script>
+    window.addEventListener('load', () => {
+        if (typeof ethers === 'undefined') {
+            alert("ethers non chargé");
+            return;
+        }
+        initApp();
+    });
+
+    async function initApp() {
+        let provider = null;
+        let signer = null;
+        let userAddress = null;
+
+        const API_BASE = "https://fleurs-resolver-final.vercel.app";
+        const API_RESOLVE = API_BASE + "/api/resolve";
+        const RPC_URL = "https://rpc.xdcrpc.com";
+        const CONTRACT_ADDR = "0x295a7aB79368187a6CD03c464cfaAb04d799784E";
+        
+        const TOKEN_ADDRESSES = {
+            USDC: "0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1",
+            CGO: "0x8f9920283470f52128bf11b0c14e798be704fd15",
+            SRX: "0x5d5f074837f5d4618b3916ba74de1bf9662a3fed",
+            PLI: "0xff7412ea7c8445c46a8254dfb557ac1e48094391",
+            LBT: "0x05940b2df33d6371201e7ae099ced4c363855dfe",
+            FXD: "0x49d3f7543335cf38Fa10889CCFF10207e22110B5"
+        };
+        const TOKEN_DECIMALS = { USDC: 6, CGO: 18, SRX: 18, PLI: 18, LBT: 18, FXD: 18 };
+        const ADDRESS_TO_SYMBOL = Object.fromEntries(Object.entries(TOKEN_ADDRESSES).map(([sym, addr]) => [addr.toLowerCase(), sym]));
+
+        const elements = {
+            connectBtn: document.getElementById('connectBtn'),
+            sendBtn: document.getElementById('sendBtn'),
+            accountInfo: document.getElementById('accountInfo'),
+            balanceInfo: document.getElementById('balanceInfo'),
+            txStatus: document.getElementById('txStatus'),
+            donateStatus: document.getElementById('donateStatus'),
+            invoiceContainer: document.getElementById('invoiceContainer'),
+            manualInvoice: document.getElementById('manualInvoice'),
+            fromDomain: document.getElementById('fromDomain'),
+            toDomain: document.getElementById('toDomain'),
+            amount: document.getElementById('amount'),
+            token: document.getElementById('token'),
+            quickDonateBtn: document.getElementById('quickDonateBtn'),
+            donateAmount: document.getElementById('donateAmount'),
+            invoiceHash: document.getElementById('invoiceHash'),
+            verifyHashBtn: document.getElementById('verifyHashBtn'),
+            invoiceFrom: document.getElementById('invoiceFrom'),
+            invoiceTo: document.getElementById('invoiceTo'),
+            invoiceAmount: document.getElementById('invoiceAmount'),
+            invoiceSymbol: document.getElementById('invoiceSymbol'),
+            generateInvoiceBtn: document.getElementById('generateInvoiceBtn')
+        };
+
+        function setDisconnected() {
+            elements.accountInfo.innerText = "wallet : non connecté";
+            elements.balanceInfo.innerText = "solde : --";
+            elements.sendBtn.disabled = true;
+            userAddress = null;
+            signer = null;
+            provider = null;
+        }
+        setDisconnected();
+
+        function truncate(addr) { return addr ? `${addr.slice(0,6)}...${addr.slice(-4)}` : ''; }
+
+        async function getDomainCategory(domain) {
+            if (!domain || domain.startsWith('0x')) return null;
+            try {
+                const url = `${API_BASE}/api/info?domain=${encodeURIComponent(domain)}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.category || null;
+                }
+            } catch(e) {
+                console.warn("Erreur chargement catégorie:", e);
+            }
+            return null;
+        }
+
+        async function resolveDomain(domain) {
+            if (domain.startsWith('0x') && domain.length === 42) return domain;
+            try {
+                const url = `${API_RESOLVE}?domain=${encodeURIComponent(domain)}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.result) return data.result;
+                }
+            } catch(e) {
+                console.warn("API indisponible");
+            }
+            try {
+                const fallbackProvider = new ethers.JsonRpcProvider(RPC_URL);
+                const contract = new ethers.Contract(CONTRACT_ADDR, 
+                    ["function getAddress(string) view returns (address)"], 
+                    fallbackProvider
+                );
+                const addr = await contract.getAddress(domain.toLowerCase().trim());
+                if (addr && addr !== "0x0000000000000000000000000000000000000000") {
+                    return addr;
+                }
+            } catch(e) {}
+            throw new Error("Domaine non résolu");
+        }
+
+        async function fetchTransactionDetails(txHash) {
+            if (!provider) {
+                provider = new ethers.JsonRpcProvider(RPC_URL);
+            }
+            const tx = await provider.getTransaction(txHash);
+            if (!tx) throw new Error("Transaction introuvable");
+            let from = tx.from, to = tx.to, amount, symbol, nonce = tx.nonce;
+            if (tx.value && tx.value !== 0n) {
+                amount = parseFloat(ethers.formatEther(tx.value));
+                symbol = "XDC";
+            } else {
+                const receipt = await provider.getTransactionReceipt(txHash);
+                if (!receipt?.logs) throw new Error("Logs non trouvés");
+                const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+                let found = false;
+                for (const log of receipt.logs) {
+                    if (log.topics[0] === transferTopic) {
+                        const tokenAddress = log.address.toLowerCase();
+                        const sym = ADDRESS_TO_SYMBOL[tokenAddress];
+                        if (!sym) continue;
+                        from = "0x" + log.topics[1].slice(26);
+                        to = "0x" + log.topics[2].slice(26);
+                        const raw = ethers.toBigInt(log.data);
+                        amount = Number(ethers.formatUnits(raw, TOKEN_DECIMALS[sym]));
+                        symbol = sym;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) throw new Error("Aucun transfert détecté");
+            }
+            const block = await provider.getBlock(tx.blockNumber);
+            const timestampUTC = new Date(block.timestamp * 1000).toISOString();
+            const shortHash = txHash.slice(2, 10);
+            const invoiceNumber = `FDL-${new Date().getFullYear()}-${shortHash}${nonce}`;
+            return { amount, symbol, from, to, invoiceNumber, timestampUTC };
+        }
+
+        async function getQRCodeDataURL(data, size = 150) {
+            const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function displayInvoice(txHash, amount, from, to, symbol, invoiceNumber, timestampUTC) {
+            try {
+                const dateUTC = timestampUTC;
+                const [catFrom, catTo] = await Promise.all([
+                    getDomainCategory(from),
+                    getDomainCategory(to)
+                ]);
+                
+                const qrData = {
+                    invoice: invoiceNumber,
+                    hash: txHash,
+                    from: from,
+                    to: to,
+                    amount: amount,
+                    symbol: symbol,
+                    date: timestampUTC,
+                    explorer: `https://xdcscan.com/tx/${txHash}`
+                };
+                const qrCodeURL = await getQRCodeDataURL(JSON.stringify(qrData), 150);
+                
+                const invoiceData = {
+                    facture: {
+                        numero: invoiceNumber,
+                        emetteur: from,
+                        categorie_emetteur: catFrom,
+                        destinataire: to,
+                        categorie_destinataire: catTo,
+                        montant: amount,
+                        devise: symbol,
+                        date: dateUTC,
+                        hash: txHash,
+                        lien: `https://xdcscan.com/tx/${txHash}`
+                    }
+                };
+                const jsonStr = JSON.stringify(invoiceData, null, 2);
+                const html = `<pre style="white-space:pre-wrap;">${jsonStr}</pre>
+                             <div class="qr-code-img"><img src="${qrCodeURL}" alt="QR Code de preuve"></div>
+                             <div class="invoice-actions">
+                                 <button class="copyJsonBtn">Copier JSON</button>
+                                 <button class="copyHashBtn">Copier hash</button>
+                                 <button id="saveBtn">Télécharger la facture (HTML)</button>
+                             </div>
+                             <div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${txHash}" target="_blank">Voir sur XDCScan</a></div>`;
+                const container = elements.invoiceContainer;
+                container.innerHTML = html;
+                container.style.display = 'block';
+                container.querySelector('.copyJsonBtn')?.addEventListener('click', () => { navigator.clipboard.writeText(jsonStr); alert("JSON copié"); });
+                container.querySelector('.copyHashBtn')?.addEventListener('click', () => { navigator.clipboard.writeText(txHash); alert("Hash copié"); });
+                container.querySelector('#saveBtn')?.addEventListener('click', () => {
+                    const factureContent = container.querySelector('pre').outerHTML;
+                    const qrImg = container.querySelector('.qr-code-img img').src;
+                    const fullHtml = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Facture ${invoiceNumber}</title>
+<style>
+    body { font-family: monospace; padding: 20px; background: white; }
+    pre { white-space: pre-wrap; font-family: monospace; }
+    .qr-code-img { text-align: center; margin: 20px 0; }
+    .qr-code-img img { width: 150px; height: 150px; border: 1px solid #ddd; padding: 5px; }
+    .hash-link { margin-top: 20px; font-size: 12px; }
+</style>
+</head>
+<body>
+${factureContent}
+<div class="qr-code-img"><img src="${qrImg}"></div>
+<div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${txHash}">Voir sur XDCScan</a></div>
+</body>
+</html>`;
+                    const blob = new Blob([fullHtml], { type: "text/html" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `facture_${invoiceNumber}.html`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    alert("Facture HTML téléchargée. Le QR code est visible et scannable.");
+                });
+            } catch(err) {
+                console.error("displayInvoice failed", err);
+                elements.txStatus.innerHTML += `<br>⚠️ Facture non générée : ${err.message}`;
+            }
+        }
+
+        async function sendDonation(amountXDC) {
+            if (!signer) return alert("Connectez wallet.");
+            if (isNaN(amountXDC) || amountXDC <= 0) return;
+            elements.donateStatus.innerHTML = "⏳ Envoi...";
+            try {
+                const target = await resolveDomain("fleursdelys.xdc");
+                const fromDisplay = elements.fromDomain.value || truncate(userAddress);
+                const tx = await signer.sendTransaction({ to: target, value: ethers.parseEther(amountXDC.toString()) });
+                elements.donateStatus.innerHTML = `📡 Tx: ${tx.hash.slice(0,10)}...`;
+                await tx.wait();
+                elements.donateStatus.innerHTML = `✅ Don de ${amountXDC} XDC à fleursdelys.xdc effectué !`;
+                const details = await fetchTransactionDetails(tx.hash);
+                await displayInvoice(tx.hash, amountXDC, fromDisplay, 'fleursdelys.xdc', 'XDC', details.invoiceNumber, details.timestampUTC);
+            } catch (err) { elements.donateStatus.innerHTML = `❌ ${err.message}`; }
+        }
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert("Installez MetaMask ou XDCPay.");
+                return;
+            }
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+                elements.accountInfo.innerHTML = `✅ ${truncate(userAddress)}`;
+                const bal = await provider.getBalance(userAddress);
+                elements.balanceInfo.innerHTML = `💰 ${ethers.formatEther(bal)} XDC`;
+                elements.sendBtn.disabled = false;
+                window.ethereum.on('accountsChanged', () => { window.location.reload(); });
+            } catch (e) {
+                alert("Erreur : " + e.message);
+                setDisconnected();
+            }
+        }
+
+        elements.connectBtn.onclick = connectWallet;
+        elements.quickDonateBtn.onclick = () => {
+            const amount = parseFloat(elements.donateAmount.value);
+            if (!isNaN(amount) && amount > 0) sendDonation(amount);
+            else alert("Montant invalide");
+        };
+        elements.sendBtn.onclick = async () => {
+            const toRaw = elements.toDomain.value.trim();
+            const amount = parseFloat(elements.amount.value);
+            const token = elements.token.value;
+            if (!toRaw || isNaN(amount) || amount <= 0) return alert("Remplissez les champs.");
+            if (!signer) return alert("Connectez wallet.");
+            
+            elements.txStatus.innerHTML = "🔍 Résolution...";
+            try {
+                let target = toRaw.startsWith('0x') && toRaw.length === 42 ? toRaw : await resolveDomain(toRaw);
+                elements.txStatus.innerHTML += `<br>⏳ Envoi de ${amount} ${token}...`;
+                let tx;
+                if (token === "XDC") {
+                    tx = await signer.sendTransaction({ to: target, value: ethers.parseEther(amount.toString()) });
+                } else {
+                    const addr = TOKEN_ADDRESSES[token];
+                    if (!addr) throw new Error("Token non supporté");
+                    const contract = new ethers.Contract(addr, ["function transfer(address to, uint256 amount) returns (bool)"], signer);
+                    const rawAmount = ethers.parseUnits(amount.toString(), TOKEN_DECIMALS[token]);
+                    tx = await contract.transfer(target, rawAmount);
+                }
+                elements.txStatus.innerHTML += `<br>📡 Tx: ${tx.hash.slice(0,10)}...`;
+                await tx.wait();
+                elements.txStatus.innerHTML += `<br>✅ Succès !`;
+                const fromDisplay = elements.fromDomain.value.trim() || truncate(userAddress);
+                const details = await fetchTransactionDetails(tx.hash);
+                await displayInvoice(tx.hash, amount, fromDisplay, toRaw, token, details.invoiceNumber, details.timestampUTC);
+            } catch(err) {
+                elements.txStatus.innerHTML += `<br>❌ ${err.message}`;
+            }
+        };
+
+        elements.verifyHashBtn.onclick = async () => {
+            const hash = elements.invoiceHash.value.trim();
+            if (!hash?.startsWith('0x') || hash.length < 66) return alert("Hash invalide.");
+            elements.manualInvoice.style.display = 'none';
+            try {
+                if (!provider) {
+                    provider = new ethers.JsonRpcProvider(RPC_URL);
+                }
+                const { amount, symbol, from, to, invoiceNumber, timestampUTC } = await fetchTransactionDetails(hash);
+                elements.invoiceAmount.value = amount;
+                elements.invoiceSymbol.value = symbol;
+                elements.invoiceSymbol.disabled = true;
+                elements.invoiceFrom.value = from;
+                elements.invoiceTo.value = to;
+                alert(`✅ Vérifié : ${amount} ${symbol}`);
+                window._pendingManual = { hash, amount, symbol, from, to, invoiceNumber, timestampUTC };
+            } catch (err) { alert("Erreur : " + err.message); }
+        };
+        elements.generateInvoiceBtn.onclick = async () => {
+            const pending = window._pendingManual;
+            if (!pending) return alert("Vérifiez d'abord un hash.");
+            const hash = pending.hash, amount = pending.amount, from = pending.from, to = pending.to, symbol = pending.symbol, invoiceNumber = pending.invoiceNumber, timestampUTC = pending.timestampUTC;
+            const dateUTC = timestampUTC;
+            const [catFrom, catTo] = await Promise.all([
+                getDomainCategory(from),
+                getDomainCategory(to)
+            ]);
+            
+            const qrData = {
+                invoice: invoiceNumber,
+                hash: hash,
+                from: from,
+                to: to,
+                amount: amount,
+                symbol: symbol,
+                date: timestampUTC,
+                explorer: `https://xdcscan.com/tx/${hash}`
+            };
+            const qrCodeURL = await getQRCodeDataURL(JSON.stringify(qrData), 150);
+            
+            const invoiceData = {
+                facture: {
+                    numero: invoiceNumber,
+                    emetteur: from,
+                    categorie_emetteur: catFrom,
+                    destinataire: to,
+                    categorie_destinataire: catTo,
+                    montant: amount,
+                    devise: symbol,
+                    date: dateUTC,
+                    hash: hash,
+                    lien: `https://xdcscan.com/tx/${hash}`
+                }
+            };
+            const jsonStr = JSON.stringify(invoiceData, null, 2);
+            const html = `<pre style="white-space:pre-wrap;">${jsonStr}</pre>
+                         <div class="qr-code-img"><img src="${qrCodeURL}" alt="QR Code de preuve"></div>
+                         <div class="invoice-actions">
+                             <button class="copyJsonBtn">Copier JSON</button>
+                             <button class="copyHashBtn">Copier hash</button>
+                             <button id="saveBtn">Télécharger la facture (HTML)</button>
+                         </div>
+                         <div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${hash}" target="_blank">Voir sur XDCScan</a></div>`;
+            elements.manualInvoice.innerHTML = html;
+            elements.manualInvoice.style.display = 'block';
+            elements.manualInvoice.querySelector('.copyJsonBtn')?.addEventListener('click', () => { navigator.clipboard.writeText(jsonStr); alert("JSON copié"); });
+            elements.manualInvoice.querySelector('.copyHashBtn')?.addEventListener('click', () => { navigator.clipboard.writeText(hash); alert("Hash copié"); });
+            elements.manualInvoice.querySelector('#saveBtn')?.addEventListener('click', () => {
+                const factureContent = elements.manualInvoice.querySelector('pre').outerHTML;
+                const qrImg = elements.manualInvoice.querySelector('.qr-code-img img').src;
+                const fullHtml = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Facture ${invoiceNumber}</title>
+<style>
+    body { font-family: monospace; padding: 20px; background: white; }
+    pre { white-space: pre-wrap; font-family: monospace; }
+    .qr-code-img { text-align: center; margin: 20px 0; }
+    .qr-code-img img { width: 150px; height: 150px; border: 1px solid #ddd; padding: 5px; }
+    .hash-link { margin-top: 20px; font-size: 12px; }
+</style>
+</head>
+<body>
+${factureContent}
+<div class="qr-code-img"><img src="${qrImg}"></div>
+<div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${hash}">Voir sur XDCScan</a></div>
+</body>
+</html>`;
+                const blob = new Blob([fullHtml], { type: "text/html" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `facture_${invoiceNumber}.html`;
+                a.click();
+                URL.revokeObjectURL(url);
+                alert("Facture HTML téléchargée. Le QR code est visible et scannable.");
+            });
+        };
+    }
+</script>
+</body>
+</html>

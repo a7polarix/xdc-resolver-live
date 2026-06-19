@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleurs de Lys – Ticket de caisse</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #eef2f5; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding: 2rem 1rem; color: #1e2a3a; }
+        .container { max-width: 720px; margin: 0 auto; }
+        .card { background: #ffffff; border-radius: 24px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e4e9ef; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+        h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; background: linear-gradient(135deg, #1e2a3a, #2c3e4e); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .sub { font-size: 0.75rem; color: #5c6f87; margin-top: 0.2rem; }
+        .donate-line { display: flex; align-items: center; gap: 0.75rem; background: #f4f6fa; padding: 0.4rem 0.8rem; border-radius: 48px; }
+        .donate-line span { font-weight: 500; color: #2c3e4e; }
+        .donate-line input { width: 90px; padding: 0.4rem 0.6rem; border-radius: 40px; border: 1px solid #cfdde6; background: white; font-size: 0.85rem; text-align: center; }
+        .donate-line button { background: #e2e8f0; border: none; padding: 0.4rem 1rem; border-radius: 40px; font-weight: 500; cursor: pointer; color: #1e2a3a; transition: background 0.2s; }
+        .donate-line button:hover { background: #cbd5e1; }
+        .inline-status { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        button { background: #e2e8f0; border: none; padding: 0.5rem 1.2rem; border-radius: 40px; font-weight: 500; cursor: pointer; color: #1e2a3a; transition: all 0.2s; }
+        button:active { transform: scale(0.97); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.primary { background: #2c3e4e; color: white; }
+        button.primary:hover { background: #1e2a3a; }
+        .status { background: #f4f6fa; padding: 0.5rem 1rem; border-radius: 40px; font-size: 0.8rem; color: #2c3e4e; word-break: break-all; }
+        .row { display: flex; gap: 1rem; margin: 1rem 0; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 160px; }
+        label { display: block; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: #5c6f87; margin-bottom: 0.3rem; }
+        input, select { width: 100%; padding: 0.7rem 0.9rem; border-radius: 48px; border: 1px solid #cfdde6; background: white; font-size: 0.9rem; transition: border 0.2s; }
+        input:focus, select:focus { outline: none; border-color: #8ba0b5; }
+        small { font-size: 0.7rem; color: #7a8a9e; display: block; margin-top: 0.25rem; }
+        .invoice { background: #fafcfd; border-radius: 20px; padding: 1rem; font-family: 'SF Mono', Monaco, monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-word; border: 1px solid #e4e9ef; margin-top: 1rem; }
+        .invoice-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
+        .invoice-actions button { background: #edf2f7; font-size: 0.7rem; padding: 0.3rem 0.8rem; }
+        .hash-link { margin-top: 0.6rem; font-size: 0.7rem; }
+        footer { text-align: center; font-size: 0.7rem; color: #8ba0b5; margin-top: 2rem; }
+        .qr-code-img { margin-top: 1rem; text-align: center; }
+        .qr-code-img img { width: 150px; height: 150px; border: 1px solid #ddd; padding: 5px; background: white; }
+        .config-row { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.8rem; align-items: center; }
+        .config-row input, .config-row select { width: auto; flex: 1; min-width: 150px; }
+        .config-row label { width: auto; min-width: 120px; margin-bottom: 0; }
+        .oracle-test { font-size: 0.7rem; margin-left: 0.5rem; }
+        .inline-value { font-weight: bold; background: #f4f6fa; padding: 0.3rem 0.6rem; border-radius: 20px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.16.0/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="header-flex">
+            <div>
+                <h1>🌿 Fleurs de Lys</h1>
+                <div class="sub">résolveur .xdc · .rwa · .depin</div>
+            </div>
+            <div class="donate-line">
+                <span>💝 don</span>
+                <input type="number" id="donateAmount" placeholder="montant" step="any" value="1">
+                <button id="quickDonateBtn">envoyer</button>
+            </div>
+        </div>
+        <div class="inline-status">
+            <button id="connectBtn">🔌 connecter</button>
+            <div id="accountInfo" class="status">wallet : non connecté</div>
+            <div id="balanceInfo" class="status">solde : --</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 1rem; font-weight: 500;">✎ envoyer à un domaine</h3>
+        <div class="row">
+            <div class="col">
+                <label>depuis (domaine)</label>
+                <input type="text" id="fromDomain" placeholder="ex: fleursdelys.xdc">
+                <small>optionnel</small>
+            </div>
+            <div class="col">
+                <label>vers (domaine ou adresse)</label>
+                <input type="text" id="toDomain" placeholder="ex: gold.xdc">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label>montant</label>
+                <input type="number" id="amount" placeholder="montant" step="any">
+            </div>
+            <div class="col">
+                <label>devise</label>
+                <select id="token">
+                    <option value="XDC">XDC (natif)</option>
+                    <option value="USDC">USDC</option>
+                    <option value="CGO">CGO (Comtech Gold)</option>
+                    <option value="SRX">SRX (StorX)</option>
+                    <option value="PLI">PLI (Plugin)</option>
+                    <option value="LBT">LBT (Law Blocks)</option>
+                    <option value="FXD">FXD (Fathom Dollar)</option>
+                </select>
+            </div>
+        </div>
+        <button id="sendBtn" disabled>📤 envoyer</button>
+        <div id="txStatus" class="status" style="margin-top: 1rem;"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 0.75rem; font-weight: 500;">🧾 facture récente</h3>
+        <div id="donateStatus" class="status" style="background: #f4f6fa;"></div>
+        <div id="invoiceContainer" class="invoice" style="display: none;"></div>
+        <div class="invoice-actions" style="margin-top: 0.8rem;">
+            <button id="copyJsonBtn" style="display:none;">Copier JSON</button>
+            <button id="copyHashBtn" style="display:none;">Copier hash</button>
+            <button id="saveClientBtn" style="display:none;">🧾 Télécharger ticket client</button>
+            <button id="saveComptaBtn" style="display:none;">📑 Télécharger facture comptable</button>
+            <button id="saveBothBtn" style="display:none;">📁 Télécharger les deux</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 0.75rem; font-weight: 500;">🔍 générer facture depuis un hash</h3>
+        <input type="text" id="invoiceHash" placeholder="hash de transaction (0x...)" style="margin-bottom: 0.5rem;">
+        <button id="verifyHashBtn" style="width: auto;">vérifier le hash</button>
+        <div style="display: flex; gap: 0.8rem; margin-top: 1rem;">
+            <input type="text" id="invoiceFrom" placeholder="émetteur (adresse)" readonly style="flex:1; background:#f8fafc;">
+            <input type="text" id="invoiceTo" placeholder="destinataire (adresse)" readonly style="flex:1; background:#f8fafc;">
+        </div>
+        <div style="display: flex; gap: 0.8rem; margin-top: 0.8rem;">
+            <input type="number" id="invoiceAmount" placeholder="montant" step="any" readonly style="flex:2; background:#f8fafc;">
+            <select id="invoiceSymbol" disabled style="flex:1;">
+                <option>XDC</option><option>USDC</option><option>CGO</option><option>SRX</option><option>PLI</option><option>LBT</option><option>FXD</option>
+            </select>
+        </div>
+        <button id="generateInvoiceBtn" style="margin-top: 1rem;">générer la facture</button>
+        <div id="manualInvoice" class="invoice" style="display: none; margin-top: 1rem;"></div>
+    </div>
+
+    <!-- Configuration fiscale -->
+    <div class="card">
+        <h3 style="margin-bottom: 0.75rem; font-weight: 500;">⚙️ Configuration (optionnelle)</h3>
+        <div class="config-row">
+            <label>📁 Fichier config (JSON)</label>
+            <input type="file" id="configFile" accept=".json" style="width:auto; flex:2;">
+            <button id="loadConfigBtn" style="width:auto;">Charger</button>
+        </div>
+        <div class="config-row">
+            <label>🧾 SIRET</label>
+            <input type="text" id="siretField" placeholder="123 456 789 00012">
+        </div>
+        <div class="config-row">
+            <label>🏷️ TVA (%)</label>
+            <input type="number" id="tvaField" placeholder="20" step="any" value="20">
+        </div>
+        <div class="config-row">
+            <label>🏢 Adresse siège</label>
+            <input type="text" id="adresseSiegeField" placeholder="10 Rue de la Paix, Paris">
+        </div>
+        <div class="config-row">
+            <label>📦 Objet prestation</label>
+            <input type="text" id="objetPrestationField" placeholder="Prestation photographique">
+        </div>
+        <div class="config-row">
+            <label>🔮 Oracle (adresse)</label>
+            <input type="text" id="oracleAddressField" placeholder="0x... (laisser vide pour utiliser l'oracle par défaut)">
+            <button id="testOracleBtn" class="oracle-test">🔍 Tester</button>
+        </div>
+        <div class="config-row">
+            <label>💶 Devise fiat</label>
+            <input type="text" id="fiatCurrencyField" placeholder="USD" value="USD">
+        </div>
+        <div class="config-row">
+            <label>🏷️ Catégorie personnalisée</label>
+            <input type="text" id="categoriePersoField" placeholder="Laissez vide pour auto-détection">
+        </div>
+        <div class="config-row">
+            <label>⚖️ Régime TVA</label>
+            <select id="regimeTvaField">
+                <option value="classique">Classique (TVA collectée)</option>
+                <option value="auto_entreprise">Auto-entreprise (TVA non applicable)</option>
+            </select>
+        </div>
+        <div class="config-row">
+            <label>📝 Mention TVA (optionnelle)</label>
+            <input type="text" id="mentionTvaField" placeholder="TVA non applicable, art. 293B du CGI">
+        </div>
+        <div class="config-row">
+            <label>💰 Prix oracle actuel</label>
+            <span id="oraclePriceDisplay" class="inline-value">Non testé</span>
+        </div>
+        <div class="config-row">
+            <label>💶 Montant TTC estimé</label>
+            <span id="ttcEstimateDisplay" class="inline-value">--</span>
+        </div>
+        <small>Les champs ci-dessus sont sauvegardés localement. Le fichier JSON peut contenir : siret, tva, adresse_siege, objet_prestation, oracleAddress, fiatCurrency, categorie_personnalisee, regime_tva, mention_tva</small>
+    </div>
+
+    <footer>© 2026 FocalZero – résolveur décentralisé</footer>
+</div>
+
+<script>
+    // ==================== i18n ====================
+    const I18N = { fr: { copy_json: 'Copier JSON', copy_hash: 'Copier hash', download_invoice: 'Télécharger la facture (HTML)', view_on_xdcscan: 'Voir sur XDCScan', json_copied: 'JSON copié', hash_copied: 'Hash copié', invoice_downloaded: 'Facture HTML téléchargée.' },
+        en: { copy_json: 'Copy JSON', copy_hash: 'Copy hash', download_invoice: 'Download invoice (HTML)', view_on_xdcscan: 'View on XDCScan', json_copied: 'JSON copied', hash_copied: 'Hash copied', invoice_downloaded: 'Invoice HTML downloaded.' } };
+    function getBrowserLanguage() { return (navigator.language || 'fr').startsWith('fr') ? 'fr' : 'en'; }
+    const browserLang = getBrowserLanguage();
+    const langData = I18N[browserLang];
+    function t(key) { return langData[key] || key; }
+
+    // ==================== Stockage local ====================
+    function saveLocalConfig() {
+        localStorage.setItem('fl_siret', document.getElementById('siretField').value.trim());
+        localStorage.setItem('fl_tva', document.getElementById('tvaField').value);
+        localStorage.setItem('fl_adresse_siege', document.getElementById('adresseSiegeField').value);
+        localStorage.setItem('fl_objet_prestation', document.getElementById('objetPrestationField').value);
+        localStorage.setItem('fl_oracle_address', document.getElementById('oracleAddressField').value.trim());
+        localStorage.setItem('fl_fiat_currency', document.getElementById('fiatCurrencyField').value.trim());
+        localStorage.setItem('fl_categorie_perso', document.getElementById('categoriePersoField').value.trim());
+        localStorage.setItem('fl_regime_tva', document.getElementById('regimeTvaField').value);
+        localStorage.setItem('fl_mention_tva', document.getElementById('mentionTvaField').value);
+    }
+    function loadLocalConfig() {
+        document.getElementById('siretField').value = localStorage.getItem('fl_siret') || '';
+        document.getElementById('tvaField').value = localStorage.getItem('fl_tva') || '20';
+        document.getElementById('adresseSiegeField').value = localStorage.getItem('fl_adresse_siege') || '';
+        document.getElementById('objetPrestationField').value = localStorage.getItem('fl_objet_prestation') || '';
+        document.getElementById('oracleAddressField').value = localStorage.getItem('fl_oracle_address') || '';
+        document.getElementById('fiatCurrencyField').value = localStorage.getItem('fl_fiat_currency') || 'USD';
+        document.getElementById('categoriePersoField').value = localStorage.getItem('fl_categorie_perso') || '';
+        document.getElementById('regimeTvaField').value = localStorage.getItem('fl_regime_tva') || 'classique';
+        document.getElementById('mentionTvaField').value = localStorage.getItem('fl_mention_tva') || '';
+    }
+    document.getElementById('siretField').addEventListener('input', saveLocalConfig);
+    document.getElementById('tvaField').addEventListener('input', saveLocalConfig);
+    document.getElementById('adresseSiegeField').addEventListener('input', saveLocalConfig);
+    document.getElementById('objetPrestationField').addEventListener('input', saveLocalConfig);
+    document.getElementById('oracleAddressField').addEventListener('input', saveLocalConfig);
+    document.getElementById('fiatCurrencyField').addEventListener('input', saveLocalConfig);
+    document.getElementById('categoriePersoField').addEventListener('input', saveLocalConfig);
+    document.getElementById('regimeTvaField').addEventListener('change', saveLocalConfig);
+    document.getElementById('mentionTvaField').addEventListener('input', saveLocalConfig);
+    loadLocalConfig();
+
+    // ==================== Oracle (corrigé avec decimals) ====================
+    let currentOraclePrice = null;
+    const DEFAULT_ORACLE_ADDRESS = "0x896CC6fE8AD04dF9f481332606c445768e286076";
+
+    async function testOracle(oracleAddress) {
+        const addressToUse = oracleAddress && oracleAddress.trim() !== "" ? oracleAddress.trim() : DEFAULT_ORACLE_ADDRESS;
+        if (!addressToUse || !addressToUse.startsWith('0x')) return null;
+        try {
+            const provider = new ethers.JsonRpcProvider("https://rpc.xdcrpc.com");
+            const abi = [
+                "function latestAnswer() view returns (int256)",
+                "function decimals() view returns (uint8)"
+            ];
+            const contract = new ethers.Contract(addressToUse, abi, provider);
+            const decimals = await contract.decimals();
+            const priceRaw = await contract.latestAnswer();
+            const priceFloat = Number(priceRaw) / (10 ** Number(decimals));
+            currentOraclePrice = priceFloat;
+            const fiat = document.getElementById('fiatCurrencyField').value.trim() || 'USD';
+            document.getElementById('oraclePriceDisplay').innerHTML = `${priceFloat.toFixed(8)} ${fiat}/XDC`;
+            return priceFloat;
+        } catch(e) {
+            console.error(e);
+            document.getElementById('oraclePriceDisplay').innerHTML = 'Erreur';
+            return null;
+        }
+    }
+    
+    document.getElementById('testOracleBtn').addEventListener('click', async () => {
+        const addr = document.getElementById('oracleAddressField').value.trim();
+        await testOracle(addr);
+    });
+
+    // ==================== Calcul TTC ====================
+    async function updateTTCEstimate() {
+        const amount = parseFloat(document.getElementById('amount').value) || 0;
+        let price = currentOraclePrice;
+        const oracleAddr = document.getElementById('oracleAddressField').value.trim();
+        if (oracleAddr && price === null) price = await testOracle(oracleAddr);
+        if (!price || isNaN(amount) || amount <= 0) {
+            document.getElementById('ttcEstimateDisplay').innerHTML = '--';
+            return;
+        }
+        const tva = parseFloat(document.getElementById('tvaField').value) || 0;
+        const regime = document.getElementById('regimeTvaField').value;
+        const effectiveTva = regime === 'auto_entreprise' ? 0 : tva;
+        const ttc = amount * price * (1 + effectiveTva / 100);
+        const fiat = document.getElementById('fiatCurrencyField').value || 'USD';
+        document.getElementById('ttcEstimateDisplay').innerHTML = `${ttc.toFixed(4)} ${fiat}`;
+    }
+    document.getElementById('amount').addEventListener('input', updateTTCEstimate);
+    document.getElementById('tvaField').addEventListener('input', updateTTCEstimate);
+    document.getElementById('regimeTvaField').addEventListener('change', updateTTCEstimate);
+    setInterval(updateTTCEstimate, 30000);
+
+    // ==================== Chargement fichier JSON ====================
+    document.getElementById('loadConfigBtn').addEventListener('click', () => {
+        const file = document.getElementById('configFile').files[0];
+        if (!file) return alert("Sélectionnez un fichier JSON");
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const config = JSON.parse(e.target.result);
+                if (config.siret) document.getElementById('siretField').value = config.siret;
+                if (config.tva !== undefined) document.getElementById('tvaField').value = config.tva;
+                if (config.adresse_siege) document.getElementById('adresseSiegeField').value = config.adresse_siege;
+                if (config.objet_prestation) document.getElementById('objetPrestationField').value = config.objet_prestation;
+                if (config.oracleAddress) document.getElementById('oracleAddressField').value = config.oracleAddress;
+                if (config.fiatCurrency) document.getElementById('fiatCurrencyField').value = config.fiatCurrency;
+                if (config.categorie_personnalisee) document.getElementById('categoriePersoField').value = config.categorie_personnalisee;
+                if (config.regime_tva) document.getElementById('regimeTvaField').value = config.regime_tva;
+                if (config.mention_tva) document.getElementById('mentionTvaField').value = config.mention_tva;
+                saveLocalConfig();
+                alert("Configuration chargée");
+                updateTTCEstimate();
+                if (config.oracleAddress) testOracle(config.oracleAddress);
+                else testOracle(DEFAULT_ORACLE_ADDRESS);
+            } catch(e) { alert("Erreur parsing JSON"); }
+        };
+        reader.readAsText(file);
+    });
+
+    // ==================== INIT APP ====================
+    window.addEventListener('load', () => {
+        if (typeof ethers === 'undefined') { alert("ethers non chargé"); return; }
+        initApp();
+    });
+
+    async function initApp() {
+        let provider = null, signer = null, userAddress = null;
+        const API_BASE = "https://fleurs-resolver-final.vercel.app";
+        const API_RESOLVE = API_BASE + "/api/resolve";
+        const API_INFO = API_BASE + "/api/info";
+        const RPC_URL = "https://rpc.xdcrpc.com";
+        const CONTRACT_ADDR = "0x295a7aB79368187a6CD03c464cfaAb04d799784E";
+        
+        const TOKEN_ADDRESSES = {
+            USDC: "0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1",
+            CGO: "0x8f9920283470f52128bf11b0c14e798be704fd15",
+            SRX: "0x5d5f074837f5d4618b3916ba74de1bf9662a3fed",
+            PLI: "0xff7412ea7c8445c46a8254dfb557ac1e48094391",
+            LBT: "0x05940b2df33d6371201e7ae099ced4c363855dfe",
+            FXD: "0x49d3f7543335cf38Fa10889CCFF10207e22110B5"
+        };
+        const TOKEN_DECIMALS = { USDC: 6, CGO: 18, SRX: 18, PLI: 18, LBT: 18, FXD: 18 };
+        const ADDRESS_TO_SYMBOL = Object.fromEntries(Object.entries(TOKEN_ADDRESSES).map(([sym, addr]) => [addr.toLowerCase(), sym]));
+
+        const elements = {
+            connectBtn: document.getElementById('connectBtn'), sendBtn: document.getElementById('sendBtn'),
+            accountInfo: document.getElementById('accountInfo'), balanceInfo: document.getElementById('balanceInfo'),
+            txStatus: document.getElementById('txStatus'), donateStatus: document.getElementById('donateStatus'),
+            invoiceContainer: document.getElementById('invoiceContainer'), manualInvoice: document.getElementById('manualInvoice'),
+            fromDomain: document.getElementById('fromDomain'), toDomain: document.getElementById('toDomain'),
+            amount: document.getElementById('amount'), token: document.getElementById('token'),
+            quickDonateBtn: document.getElementById('quickDonateBtn'), donateAmount: document.getElementById('donateAmount'),
+            invoiceHash: document.getElementById('invoiceHash'), verifyHashBtn: document.getElementById('verifyHashBtn'),
+            invoiceFrom: document.getElementById('invoiceFrom'), invoiceTo: document.getElementById('invoiceTo'),
+            invoiceAmount: document.getElementById('invoiceAmount'), invoiceSymbol: document.getElementById('invoiceSymbol'),
+            generateInvoiceBtn: document.getElementById('generateInvoiceBtn')
+        };
+
+        function setDisconnected() {
+            elements.accountInfo.innerText = "wallet : non connecté";
+            elements.balanceInfo.innerText = "solde : --";
+            elements.sendBtn.disabled = true;
+            userAddress = null; signer = null; provider = null;
+        }
+        setDisconnected();
+
+        function truncate(addr) { return addr ? `${addr.slice(0,6)}...${addr.slice(-4)}` : ''; }
+
+        async function getDomainCategory(domain) {
+            if (!domain || domain.startsWith('0x')) return null;
+            const catPerso = document.getElementById('categoriePersoField').value.trim();
+            if (catPerso) return catPerso;
+            try {
+                const url = `${API_BASE}/api/info?domain=${encodeURIComponent(domain)}`;
+                const res = await fetch(url);
+                if (res.ok) { const data = await res.json(); return data.category || null; }
+            } catch(e) { console.warn(e); }
+            return null;
+        }
+
+        async function resolveDomain(domain) {
+            if (domain.startsWith('0x') && domain.length === 42) return domain;
+            try {
+                const url = `${API_RESOLVE}?domain=${encodeURIComponent(domain)}`;
+                const res = await fetch(url);
+                if (res.ok) { const data = await res.json(); if (data.result) return data.result; }
+            } catch(e) { console.warn("API indisponible"); }
+            try {
+                const fallbackProvider = new ethers.JsonRpcProvider(RPC_URL);
+                const contract = new ethers.Contract(CONTRACT_ADDR, ["function getAddress(string) view returns (address)"], fallbackProvider);
+                const addr = await contract.getAddress(domain.toLowerCase().trim());
+                if (addr && addr !== "0x0000000000000000000000000000000000000000") return addr;
+            } catch(e) {}
+            throw new Error("Domaine non résolu");
+        }
+
+        async function fetchTransactionDetails(txHash) {
+            if (!provider) provider = new ethers.JsonRpcProvider(RPC_URL);
+            const tx = await provider.getTransaction(txHash);
+            if (!tx) throw new Error("Transaction introuvable");
+            let from = tx.from, to = tx.to, amount, symbol, nonce = tx.nonce;
+            if (tx.value && tx.value !== 0n) {
+                amount = parseFloat(ethers.formatEther(tx.value));
+                symbol = "XDC";
+            } else {
+                const receipt = await provider.getTransactionReceipt(txHash);
+                if (!receipt?.logs) throw new Error("Logs non trouvés");
+                const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+                let found = false;
+                for (const log of receipt.logs) {
+                    if (log.topics[0] === transferTopic) {
+                        const tokenAddress = log.address.toLowerCase();
+                        const sym = ADDRESS_TO_SYMBOL[tokenAddress];
+                        if (!sym) continue;
+                        from = "0x" + log.topics[1].slice(26);
+                        to = "0x" + log.topics[2].slice(26);
+                        const raw = ethers.toBigInt(log.data);
+                        amount = Number(ethers.formatUnits(raw, TOKEN_DECIMALS[sym]));
+                        symbol = sym;
+                        found = true; break;
+                    }
+                }
+                if (!found) throw new Error("Aucun transfert détecté");
+            }
+            const block = await provider.getBlock(tx.blockNumber);
+            const timestampUTC = new Date(block.timestamp * 1000).toISOString();
+            const shortHash = txHash.slice(2, 10);
+            const invoiceNumber = `FDL-${new Date().getFullYear()}-${shortHash}${nonce}`;
+            return { amount, symbol, from, to, invoiceNumber, timestampUTC };
+        }
+
+        async function getQRCodeDataURL(data, size = 150) {
+            const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); });
+        }
+
+        async function getOraclePrice() {
+            const addr = document.getElementById('oracleAddressField').value.trim();
+            return await testOracle(addr);
+        }
+
+        function getConfigFields() {
+            return {
+                siret: document.getElementById('siretField').value.trim(),
+                tva: parseFloat(document.getElementById('tvaField').value) || 0,
+                adresse_siege: document.getElementById('adresseSiegeField').value.trim(),
+                objet_prestation: document.getElementById('objetPrestationField').value.trim(),
+                oracleAddress: document.getElementById('oracleAddressField').value.trim(),
+                fiatCurrency: document.getElementById('fiatCurrencyField').value.trim() || 'USD',
+                categorie_personnalisee: document.getElementById('categoriePersoField').value.trim(),
+                regime_tva: document.getElementById('regimeTvaField').value,
+                mention_tva: document.getElementById('mentionTvaField').value.trim()
+            };
+        }
+
+        async function buildInvoiceData(txHash, amount, from, to, symbol, invoiceNumber, timestampUTC, fromCategory, toCategory, amountCryptoStr) {
+            const config = getConfigFields();
+            const price = await getOraclePrice();
+            const effectiveTva = config.regime_tva === 'auto_entreprise' ? 0 : config.tva;
+            let montantTTCFiat = null;
+            let tauxChange = null;
+            if (price && !isNaN(amount)) {
+                tauxChange = price;
+                montantTTCFiat = amount * price * (1 + effectiveTva / 100);
+            }
+            const mentionTvaFinal = config.regime_tva === 'auto_entreprise' 
+                ? (config.mention_tva || "TVA non applicable, art. 293B du CGI")
+                : config.mention_tva;
+            
+            const facture = {
+                numero: invoiceNumber,
+                emetteur: from,
+                categorie_emetteur: fromCategory || (config.categorie_personnalisee || null),
+                destinataire: to,
+                categorie_destinataire: toCategory,
+                montant: amountCryptoStr || `${amount} ${symbol}`,
+                devise: symbol,
+                date: timestampUTC,
+                hash: txHash,
+                lien: `https://xdcscan.com/tx/${txHash}`
+            };
+            if (config.siret) facture.siret = config.siret;
+            if (config.adresse_siege) facture.adresse_siege = config.adresse_siege;
+            if (config.objet_prestation) facture.objet_prestation = config.objet_prestation;
+            if (effectiveTva > 0) facture.tva_appliquee = `${effectiveTva}%`;
+            else if (config.regime_tva === 'auto_entreprise') facture.tva_appliquee = "0% (auto-entreprise)";
+            if (mentionTvaFinal) facture.mention_tva = mentionTvaFinal;
+            if (montantTTCFiat !== null) facture.montant_ttc_fiat = `${montantTTCFiat.toFixed(4)} ${config.fiatCurrency}`;
+            if (tauxChange !== null) facture.taux_change_utilise = `${tauxChange.toFixed(8)} ${config.fiatCurrency}/XDC`;
+            return facture;
+        }
+
+        function buildClientData(fullFacture) {
+            const client = { ...fullFacture };
+            delete client.categorie_emetteur;
+            delete client.categorie_destinataire;
+            delete client.siret;
+            delete client.adresse_siege;
+            delete client.objet_prestation;
+            delete client.tva_appliquee;
+            delete client.mention_tva;
+            delete client.montant_ttc_fiat;
+            delete client.taux_change_utilise;
+            return client;
+        }
+
+        async function displayInvoice(txHash, amount, from, to, symbol, invoiceNumber, timestampUTC, fromCategory = null, toCategory = null, amountCryptoStr = null) {
+            const fullFacture = await buildInvoiceData(txHash, amount, from, to, symbol, invoiceNumber, timestampUTC, fromCategory, toCategory, amountCryptoStr);
+            const clientFacture = buildClientData(fullFacture);
+            const qrData = { hash: txHash, from, to, amount: amountCryptoStr || `${amount} ${symbol}`, date: timestampUTC, explorer: `https://xdcscan.com/tx/${txHash}` };
+            const qrURL = await getQRCodeDataURL(JSON.stringify(qrData));
+            const fullJsonStr = JSON.stringify({ facture: fullFacture }, null, 2);
+            const clientJsonStr = JSON.stringify({ facture: clientFacture }, null, 2);
+            
+            const html = `<pre style="white-space:pre-wrap;">${fullJsonStr}</pre><div class="qr-code-img"><img src="${qrURL}" alt="QR"></div>`;
+            elements.invoiceContainer.innerHTML = html;
+            elements.invoiceContainer.style.display = 'block';
+            document.getElementById('copyJsonBtn').style.display = 'inline-block';
+            document.getElementById('copyHashBtn').style.display = 'inline-block';
+            document.getElementById('saveClientBtn').style.display = 'inline-block';
+            document.getElementById('saveComptaBtn').style.display = 'inline-block';
+            document.getElementById('saveBothBtn').style.display = 'inline-block';
+            
+            document.getElementById('copyJsonBtn').onclick = () => { navigator.clipboard.writeText(fullJsonStr); alert(t('json_copied')); };
+            document.getElementById('copyHashBtn').onclick = () => { navigator.clipboard.writeText(txHash); alert(t('hash_copied')); };
+            document.getElementById('saveClientBtn').onclick = () => downloadInvoice(clientJsonStr, invoiceNumber, qrURL, 'client');
+            document.getElementById('saveComptaBtn').onclick = () => downloadInvoice(fullJsonStr, invoiceNumber, qrURL, 'comptable');
+            document.getElementById('saveBothBtn').onclick = () => {
+                downloadInvoice(clientJsonStr, invoiceNumber, qrURL, 'client');
+                setTimeout(() => downloadInvoice(fullJsonStr, invoiceNumber, qrURL, 'comptable'), 500);
+            };
+        }
+
+        function downloadInvoice(jsonStr, invoiceNumber, qrURL, suffix) {
+            const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ${invoiceNumber}</title><style>body{font-family:monospace;padding:20px;background:white}pre{white-space:pre-wrap}.qr-code-img{text-align:center;margin:20px 0}.qr-code-img img{width:150px;height:150px;border:1px solid #ddd;padding:5px}</style></head><body><pre style="white-space:pre-wrap;">${jsonStr}</pre><div class="qr-code-img"><img src="${qrURL}"></div><div class="hash-link">🔗 <a href="https://xdcscan.com/tx/${invoiceNumber.split('-').pop()}">${t('view_on_xdcscan')}</a></div></body></html>`;
+            const blob = new Blob([fullHtml], { type: "text/html" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `facture_${invoiceNumber}_${suffix}.html`; a.click(); URL.revokeObjectURL(url);
+            alert(t('invoice_downloaded'));
+        }
+
+        async function sendDonation(amountXDC) {
+            if (!signer) return alert("Connectez wallet.");
+            if (isNaN(amountXDC) || amountXDC <= 0) return;
+            elements.donateStatus.innerHTML = "⏳ Envoi...";
+            try {
+                const target = await resolveDomain("fleursdelys.xdc");
+                const fromDisplay = elements.fromDomain.value || truncate(userAddress);
+                const tx = await signer.sendTransaction({ to: target, value: ethers.parseEther(amountXDC.toString()) });
+                elements.donateStatus.innerHTML = `📡 Tx: ${tx.hash.slice(0,10)}...`;
+                await tx.wait();
+                elements.donateStatus.innerHTML = `✅ Don de ${amountXDC} XDC à fleursdelys.xdc effectué !`;
+                const details = await fetchTransactionDetails(tx.hash);
+                await displayInvoice(tx.hash, amountXDC, fromDisplay, 'fleursdelys.xdc', 'XDC', details.invoiceNumber, details.timestampUTC);
+            } catch (err) { elements.donateStatus.innerHTML = `❌ ${err.message}`; }
+        }
+
+        async function connectWallet() {
+            if (!window.ethereum) { alert("Installez MetaMask ou XDCPay."); return; }
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+                elements.accountInfo.innerHTML = `✅ ${truncate(userAddress)}`;
+                const bal = await provider.getBalance(userAddress);
+                elements.balanceInfo.innerHTML = `💰 ${ethers.formatEther(bal)} XDC`;
+                elements.sendBtn.disabled = false;
+                window.ethereum.on('accountsChanged', () => { window.location.reload(); });
+            } catch (e) { alert("Erreur : " + e.message); setDisconnected(); }
+        }
+
+        elements.connectBtn.onclick = connectWallet;
+        elements.quickDonateBtn.onclick = () => { const a = parseFloat(elements.donateAmount.value); if (!isNaN(a) && a>0) sendDonation(a); else alert("Montant invalide"); };
+        elements.sendBtn.onclick = async () => {
+            const toRaw = elements.toDomain.value.trim(), amount = parseFloat(elements.amount.value), token = elements.token.value, fromRaw = elements.fromDomain.value.trim();
+            if (!toRaw || isNaN(amount) || amount <= 0) return alert("Remplissez les champs.");
+            if (!signer) return alert("Connectez wallet.");
+            elements.txStatus.innerHTML = "🔍 Vérification du domaine émetteur...";
+            try {
+                if (fromRaw && !fromRaw.startsWith('0x')) {
+                    const resolvedFromAddress = await resolveDomain(fromRaw);
+                    if (resolvedFromAddress.toLowerCase() !== userAddress.toLowerCase()) { elements.txStatus.innerHTML = "❌ Le domaine émetteur ne correspond pas à votre wallet connecté."; return; }
+                }
+                let target = toRaw.startsWith('0x') && toRaw.length === 42 ? toRaw : await resolveDomain(toRaw);
+                elements.txStatus.innerHTML = `⏳ Envoi de ${amount} ${token}...`;
+                let tx;
+                if (token === "XDC") {
+                    tx = await signer.sendTransaction({ to: target, value: ethers.parseEther(amount.toString()) });
+                } else {
+                    const addr = TOKEN_ADDRESSES[token];
+                    if (!addr) throw new Error("Token non supporté");
+                    const contract = new ethers.Contract(addr, ["function transfer(address to, uint256 amount) returns (bool)"], signer);
+                    const rawAmount = ethers.parseUnits(amount.toString(), TOKEN_DECIMALS[token]);
+                    tx = await contract.transfer(target, rawAmount);
+                }
+                elements.txStatus.innerHTML += `<br>📡 Tx: ${tx.hash.slice(0,10)}...`;
+                await tx.wait();
+                elements.txStatus.innerHTML += `<br>✅ Succès !`;
+                const fromDisplay = fromRaw || truncate(userAddress);
+                const details = await fetchTransactionDetails(tx.hash);
+                await displayInvoice(tx.hash, amount, fromDisplay, toRaw, token, details.invoiceNumber, details.timestampUTC);
+            } catch(err) {
+                elements.txStatus.innerHTML += `<br>❌ ${err.message}`;
+            }
+        };
+
+        elements.verifyHashBtn.onclick = async () => {
+            const hash = elements.invoiceHash.value.trim();
+            if (!hash?.startsWith('0x') || hash.length < 66) return alert("Hash invalide.");
+            elements.manualInvoice.style.display = 'none';
+            try {
+                if (!provider) provider = new ethers.JsonRpcProvider(RPC_URL);
+                const { amount, symbol, from, to, invoiceNumber, timestampUTC } = await fetchTransactionDetails(hash);
+                elements.invoiceAmount.value = amount; elements.invoiceSymbol.value = symbol; elements.invoiceSymbol.disabled = true;
+                elements.invoiceFrom.value = from; elements.invoiceTo.value = to;
+                alert(`✅ Vérifié : ${amount} ${symbol}`);
+                window._pendingManual = { hash, amount, symbol, from, to, invoiceNumber, timestampUTC };
+            } catch (err) { alert("Erreur : " + err.message); }
+        };
+        
+        elements.generateInvoiceBtn.onclick = async () => {
+            const p = window._pendingManual;
+            if (!p) return alert("Vérifiez d'abord un hash.");
+            const fromCategory = await getDomainCategory(p.from);
+            const toCategory = await getDomainCategory(p.to);
+            await displayInvoice(p.hash, p.amount, p.from, p.to, p.symbol, p.invoiceNumber, p.timestampUTC, fromCategory, toCategory, `${p.amount} ${p.symbol}`);
+        };
+        
+        setTimeout(async () => {
+            await testOracle(document.getElementById('oracleAddressField').value.trim());
+            updateTTCEstimate();
+        }, 1000);
+    }
+</script>
+</body>
+</html>
