@@ -1,6 +1,4 @@
-import fleursResolver from './resolve-fleurs.js';
-import ensResolver from './resolve-ens.js';
-import udResolver from './resolve-ud.js';
+import crosschainResolver from './resolve-crosschain.js';
 
 export default async function handler(req, res) {
     const { domain } = req.query;
@@ -8,18 +6,22 @@ export default async function handler(req, res) {
 
     const domainLower = domain.toLowerCase();
 
+    // XDC / XWD
     if (domainLower.endsWith('.xdc') || domainLower.endsWith('.rwa') || domainLower.endsWith('.depin')) {
-        return fleursResolver(req, res);
+        return crosschainResolver(req, res);
     }
+    // ENS
     else if (domainLower.endsWith('.eth')) {
-        return ensResolver(req, res);
+        return crosschainResolver(req, res);
     }
+    // Unstoppable
     else if (domainLower.endsWith('.crypto') || domainLower.endsWith('.nft') || domainLower.endsWith('.wallet') ||
              domainLower.endsWith('.dao') || domainLower.endsWith('.x') || domainLower.endsWith('.888') ||
              domainLower.endsWith('.blockchain')) {
-        return udResolver(req, res);
+        return crosschainResolver(req, res);
     }
+    // Crosschain (tout le reste)
     else {
-        return res.status(400).json({ error: 'Extension de domaine non supportée' });
+        return crosschainResolver(req, res);
     }
 }
