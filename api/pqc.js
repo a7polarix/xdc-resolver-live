@@ -70,13 +70,17 @@ export default async function handler(req, res) {
                 let result;
                 if (algorithm === 'falcon') {
                     result = await generateFalconKeys(variant);
+                    // Don't expose master secret key to client
+                    if (result.secretKey) delete result.secretKey;
                 } else if (algorithm === 'ml-dsa' || algorithm === 'dilithium') {
                     result = await generateDilithiumKeys(variant);
+                } else if (algorithm === 'slh-dsa' || algorithm === 'sphincs') {
+                    result = await generateSPHINCSKeys(variant);
+                } else if (algorithm === 'ml-kem' || algorithm === 'kyber') {
+                    result = await generateKEMKeys(variant);
                 } else {
-                    return res.status(400).json({ error: `Unknown algorithm: ${algorithm}. Use: falcon, ml-dsa` });
+                    return res.status(400).json({ error: `Unknown algorithm: ${algorithm}. Use: falcon, ml-dsa, slh-dsa, ml-kem` });
                 }
-                // Never expose master secret key to client
-                if (result.secretKey) delete result.secretKey;
                 if (result.seed) delete result.seed;
                 return res.status(200).json({ success: true, ...result });
             }
@@ -99,6 +103,8 @@ export default async function handler(req, res) {
                     result = await signMessage(message, effectiveSecretKey, variant);
                 } else if (algorithm === 'ml-dsa' || algorithm === 'dilithium') {
                     result = await signMessageDilithium(message, effectiveSecretKey, variant);
+                } else if (algorithm === 'slh-dsa' || algorithm === 'sphincs') {
+                    result = await signMessageSPHINCS(message, effectiveSecretKey, variant);
                 } else {
                     return res.status(400).json({ error: `Unknown algorithm: ${algorithm}` });
                 }
