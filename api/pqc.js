@@ -23,7 +23,109 @@ import {
     MASTER_PK,
     MASTER_SK,
 } from './falcon.js';
-import { signWithDomainKeys, verifyDomainSignature, getDomainKeys } from './pqc-domain.js';
+
+// ============================================================
+// XWD Contract RPC (lightweight — no ethers dependency)
+// ============================================================
+const XDC_RPC = 'https://rpc.xdcrpc.com';
+const XWD_CONTRACT = '0x295a7aB79368187a6CD03c464cfaAb04d799784E';
+
+// Minimal ABI encoding for getDomainInfo(string) and tokenIdOf(string)
+// getDomainInfo(string) selector: 0x0fd468f0
+// tokenIdOf(string) selector: 0x10f4732e
+async function callXWD(domainName) {
+  const domainHex = Buffer.from(domainName).toString('hex').padEnd(64, '0');
+  const paddedLen = (domainName.length * 2).toString(16).padStart(64, '0');
+  const data = '0x0fd468f0' + paddedLen + domainHex;
+
+  try {
+    const r = await fetch(XDC_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data }, 'latest'], id: 1 })
+    });
+    const j = await r.json();
+    if (j.error || !j.result) return null;
+
+    const result = j.result;
+    // Decode: (address owner, address resolver, uint256 expiry)
+    const owner = '0x' + result.slice(26, 66);
+    const resolver = '0x' + result.slice(90, 130);
+    const expiry = BigInt('0x' + result.slice(130, 194)).toString();
+
+    // Also get tokenId
+    const tokenData = '0x10f4732e' + paddedLen + domainHex;
+    const r2 = await fetch(XDC_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data: tokenData }, 'latest'], id: 2 })
+    });
+    const j2 = await r2.json();
+    let tokenId = null;
+    if (!j2.error && j2.result && j2.result !== '0x' + '0'.repeat(64)) {
+      tokenId = BigInt(j2.result).toString();
+    }
+
+    if (owner === '0x' + '0'.repeat(40)) return null; // Domain not found
+    return { owner, resolver, expiry, tokenId };
+  } catch (e) {
+    console.error('[XWD-RPC] Error:', e.message);
+    return null;
+  }
+}
+
+// Deterministic seed from domain data
+function generateDomainSeed(domainData) {
+  const { owner, tokenId, domainName } = domainData;
+  // Simple hash: keccak256-like using available tools
+  const data = owner.toLowerCase() + (tokenId || '0') + domainName;
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    const char = data.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // Expand to 48 bytes for seed
+  const seed = Buffer.alloc(48);
+  for (let i = 0; i < 48; i++) {
+    seed[i] = (hash >> (i % 4) * 8) & 0xff;
+    if (seed[i] === 0) seed[i] = i + 1; // Avoid all-zero seed
+  }
+  return seed;
+}
+
+// Derive PQC keys from domain seed (async — uses dynamic imports)
+async function deriveDomainKeys(seed, algorithm) {
+  const seedBuf = Buffer.from(seed);
+  switch (algorithm) {
+    case 'falcon': {
+      // FALCON needs 48-byte seed — use seed directly
+      const keys = (await import('@noble/post-quantum/falcon.js')).falcon512.keygen(seedBuf);
+      return { publicKey: keys.publicKey, secretKey: keys.secretKey };
+    }
+    case 'ml-dsa': {
+      // ML-DSA needs 32-byte seed
+      const s32 = Buffer.alloc(32); seedBuf.copy(s32, 0, 0, 32);
+      const keys = (await import('@noble/post-quantum/ml-dsa.js')).ml_dsa65.keygen(s32);
+      return { publicKey: keys.publicKey, secretKey: keys.secretKey };
+    }
+    case 'slh-dsa': {
+      // SLH-DSA needs 48-byte seed — use different offset
+      const s48 = Buffer.alloc(48);
+      for (let i = 0; i < 48; i++) s48[i] = seedBuf[i % seedBuf.length] ^ (i * 7 + 13);
+      const keys = (await import('@noble/post-quantum/slh-dsa.js')).slh_dsa_sha2_128s.keygen(s48);
+      return { publicKey: keys.publicKey, secretKey: keys.secretKey };
+    }
+    case 'ml-kem': {
+      // ML-KEM needs 64-byte seed
+      const s64 = Buffer.alloc(64);
+      for (let i = 0; i < 64; i++) s64[i] = seedBuf[i % seedBuf.length] ^ (i * 3 + 7);
+      const keys = (await import('@noble/post-quantum/ml-kem.js')).ml_kem512.keygen(s64);
+      return { publicKey: keys.publicKey, secretKey: keys.secretKey };
+    }
+    default: return null;
+  }
+}
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -186,22 +288,78 @@ export default async function handler(req, res) {
                 if (action === 'domain-sign' || action === 'domain-verify' || action === 'domain-info') {
                     const domain = params.domain;
                     if (!domain) return res.status(400).json({ error: 'domain required' });
+
+                    // Read domain data from XWD contract via RPC
+                    const domainData = await callXWD(domain);
+                    if (!domainData) return res.status(400).json({ error: `Domain ${domain} not found in XWD contract` });
+
+                    // Generate deterministic seed
+                    const seed = generateDomainSeed(domainData);
+
+                    if (action === 'domain-info') {
+                        // Return public keys only
+                        const publicKeys = {};
+                        for (const algo of ['falcon', 'ml-dsa', 'slh-dsa', 'ml-kem']) {
+                            try {
+                                const keys = await deriveDomainKeys(seed, algo);
+                                if (keys) publicKeys[algo] = { publicKey: '0x' + Buffer.from(keys.publicKey).toString('hex'), publicKeyBytes: keys.publicKey.length };
+                            } catch (e) { console.error(`[DOMAIN-INFO] ${algo} error:`, e.message); }
+                        }
+                        return res.status(200).json({ success: true, domain, owner: domainData.owner, tokenId: domainData.tokenId, publicKeys });
+                    }
+
                     if (action === 'domain-sign') {
                         const { txHash, algorithms } = params;
                         if (!txHash) return res.status(400).json({ error: 'txHash required' });
-                        const result = await signWithDomainKeys(domain, txHash, algorithms || ['falcon']);
-                        if (result.error) return res.status(400).json({ error: result.error });
-                        return res.status(200).json({ success: true, domain: result.domain, owner: result.owner, tokenId: result.tokenId, signatures: result.signatures });
+                        const algos = algorithms || ['falcon'];
+                        const msgBytes = Buffer.from(txHash.startsWith('0x') ? txHash.slice(2) : txHash, 'hex');
+                        const signatures = {};
+
+                        for (const algo of algos) {
+                            try {
+                                const keys = await deriveDomainKeys(seed, algo);
+                                if (!keys) continue;
+                                const pkHex = '0x' + Buffer.from(keys.publicKey).toString('hex');
+
+                                if (algo === 'falcon') {
+                                    const sig = falcon512.sign(msgBytes, keys.secretKey);
+                                    signatures.falcon = { signature: '0x' + Buffer.from(sig).toString('hex'), signatureBytes: sig.length, algorithm: 'falcon', variant: 'falcon512', standard: 'NIST FIPS 206', nistLevel: 1, publicKey: pkHex };
+                                } else if (algo === 'ml-dsa') {
+                                    const sig = ml_dsa65.sign(msgBytes, keys.secretKey);
+                                    signatures.mldsa = { signature: '0x' + Buffer.from(sig).toString('hex'), signatureBytes: sig.length, algorithm: 'ml-dsa', variant: 'ml_dsa65', standard: 'NIST FIPS 204', nistLevel: 3, publicKey: pkHex };
+                                } else if (algo === 'slh-dsa') {
+                                    const sig = slh_dsa_sha2_128s.sign(msgBytes, keys.secretKey);
+                                    signatures.slhdsa = { signature: '0x' + Buffer.from(sig).toString('hex'), signatureBytes: sig.length, algorithm: 'slh-dsa', variant: 'slh_dsa_sha2_128s', standard: 'NIST FIPS 205', nistLevel: 1, publicKey: pkHex };
+                                } else if (algo === 'ml-kem') {
+                                    const enc = ml_kem512.encapsulate(keys.publicKey);
+                                    signatures.mlkem = { ciphertext: '0x' + Buffer.from(enc.cipherText).toString('hex'), sharedSecret: '0x' + Buffer.from(enc.sharedSecret).toString('hex'), algorithm: 'ml-kem', variant: 'ml_kem512', standard: 'NIST FIPS 203', nistLevel: 1, publicKey: pkHex };
+                                }
+                            } catch (e) { console.error(`[DOMAIN-SIGN] ${algo} error:`, e.message); }
+                        }
+
+                        if (Object.keys(signatures).length === 0) {
+                            return res.status(500).json({ error: 'All PQC signing attempts failed' });
+                        }
+                        return res.status(200).json({ success: true, domain, owner: domainData.owner, tokenId: domainData.tokenId, signatures });
                     }
+
                     if (action === 'domain-verify') {
                         const { message, algorithm, signature, publicKey } = params;
-                        const result = await verifyDomainSignature(domain, message, algorithm, signature, publicKey);
-                        return res.status(200).json(result);
-                    }
-                    if (action === 'domain-info') {
-                        const result = await getDomainKeys(domain, ['falcon', 'ml-dsa', 'slh-dsa', 'ml-kem']);
-                        if (result.error) return res.status(400).json({ error: result.error });
-                        return res.status(200).json({ success: true, domain: result.domain, owner: result.owner, tokenId: result.tokenId, publicKeys: result.keys });
+                        if (!message || !algorithm || !signature || !publicKey) {
+                            return res.status(400).json({ error: 'message, algorithm, signature, publicKey required' });
+                        }
+                        const keys = await deriveDomainKeys(seed, algorithm);
+                        if (!keys) return res.status(400).json({ error: `Unsupported algorithm: ${algorithm}` });
+                        const msgBytes = Buffer.from(message.startsWith('0x') ? message.slice(2) : message, 'hex');
+                        const sigBytes = Buffer.from(signature.startsWith('0x') ? signature.slice(2) : signature, 'hex');
+                        const pkBytes = Buffer.from(publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey, 'hex');
+                        let valid = false;
+                        try {
+                            if (algorithm === 'falcon') valid = falcon512.verify(sigBytes, msgBytes, pkBytes);
+                            else if (algorithm === 'ml-dsa') valid = ml_dsa65.verify(sigBytes, msgBytes, pkBytes);
+                            else if (algorithm === 'slh-dsa') valid = slh_dsa_sha2_128s.verify(sigBytes, msgBytes, pkBytes);
+                        } catch (e) { return res.status(200).json({ valid: false, error: e.message }); }
+                        return res.status(200).json({ valid, algorithm, domain, owner: domainData.owner });
                     }
                 }
                 return res.status(400).json({
