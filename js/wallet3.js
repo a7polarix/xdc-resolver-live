@@ -153,6 +153,24 @@ async function initApp() {
     const categoryResultContent = document.getElementById('categoryResultContent');
     const closeCategoryBtn = document.getElementById('closeCategoryResult');
 
+    // Map HTML data-category to JSON keys
+    const categoryMap = {
+        compute: '991-numerique',
+        energy: '600-technologie',
+        finance: '300-finance',
+        minerals: '300-rwa',
+        commodity: '300-rwa',
+        network: '600-technologie',
+        industry: '600-technologie',
+        mobility: '800-geographie',
+        geopolitics: '800-geographie',
+        gastronomy: '700-arts',
+        art: '700-arts',
+        health: '200-religion',
+        pnj: '900-personnel',
+        other: '300-social'
+    };
+
     categoryButtons.forEach(btn => {
         btn.addEventListener('click', async () => {
             const category = btn.dataset.category;
@@ -169,16 +187,18 @@ async function initApp() {
             }
             if (categoryResult) categoryResult.classList.add('show');
             try {
-                const r = await fetch(`/api/domains?category=${encodeURIComponent(category)}`);
+                const jsonKey = categoryMap[category] || category;
+                const r = await fetch(`/api/domains?category=${encodeURIComponent(jsonKey)}`);
                 if (r.ok) {
                     const data = await r.json();
                     if (data.domains && data.domains.length > 0) {
-                        categoryResultContent.innerHTML = `📂 Catégorie ${category} :<br>✅ ${data.domains.slice(0, 50).join('<br>✅ ')}${data.domains.length > 50 ? `<br>... et ${data.domains.length - 50} autres` : ''}`;
+                        categoryResultContent.innerHTML = `📂 Catégorie ${category} (${data.count} domaines) :<br>✅ ${data.domains.slice(0, 50).join('<br>✅ ')}${data.domains.length > 50 ? `<br>... et ${data.domains.length - 50} autres` : ''}`;
                     } else {
                         categoryResultContent.innerHTML = `📂 Catégorie ${category} : aucun domaine trouvé.`;
                     }
                 } else {
-                    categoryResultContent.innerHTML = `📂 Catégorie ${category} : erreur de chargement.`;
+                    const err = await r.json();
+                    categoryResultContent.innerHTML = `📂 Catégorie ${category} : erreur (${err.error || 'inconnue'}).`;
                 }
             } catch (e) {
                 categoryResultContent.innerHTML = `📂 Catégorie ${category} : erreur réseau.`;
