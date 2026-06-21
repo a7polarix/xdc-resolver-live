@@ -528,7 +528,7 @@ async function initApp() {
     }
 
     // ==================== FACTURE (avec FALCON) ====================
-    async function buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig) {
+    async function buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, pqcResults) {
         const cfg = {
             siret: document.getElementById('siretField').value.trim(),
             tva: parseFloat(document.getElementById('tvaField').value) || 0,
@@ -565,18 +565,40 @@ async function initApp() {
             f.falcon_nist_level = falconSig.nistLevel;
             f.falcon_public_key = falconSig.publicKey;
         }
+        // Add PQC signatures from auto-sign results
+        if (pqcResults) {
+            if (pqcResults.mldsa) {
+                f.ml_dsa_signature = pqcResults.mldsa.signature;
+                f.ml_dsa_algorithm = `${pqcResults.mldsa.algorithm}-${pqcResults.mldsa.variant}`;
+                f.ml_dsa_standard = pqcResults.mldsa.standard;
+                f.ml_dsa_nist_level = pqcResults.mldsa.nistLevel;
+                f.ml_dsa_public_key = pqcResults.mldsa.publicKey;
+            }
+            if (pqcResults.slhdsa) {
+                f.slh_dsa_signature = pqcResults.slhdsa.signature;
+                f.slh_dsa_algorithm = `${pqcResults.slhdsa.algorithm}-${pqcResults.slhdsa.variant}`;
+                f.slh_dsa_standard = pqcResults.slhdsa.standard;
+                f.slh_dsa_nist_level = pqcResults.slhdsa.nistLevel;
+                f.slh_dsa_public_key = pqcResults.slhdsa.publicKey;
+            }
+            if (pqcResults.mlkem) {
+                f.ml_kem_ciphertext = pqcResults.mlkem.ciphertext;
+                f.ml_kem_shared_secret = pqcResults.mlkem.sharedSecret;
+                f.ml_kem_algorithm = pqcResults.mlkem.algorithm;
+            }
+        }
         Object.keys(f).forEach(key => f[key] === undefined && delete f[key]);
         return f;
     }
 
     function buildClientData(f) {
         const c = { ...f };
-        ['categorie_emetteur', 'categorie_destinataire', 'siret', 'adresse_siege', 'objet_prestation', 'mention_tva', 'eip712_signature', 'valeur_ht_fiat', 'falcon_signature', 'falcon_algorithm', 'falcon_standard', 'falcon_nist_level', 'falcon_public_key'].forEach(k => delete c[k]);
+        ['categorie_emetteur', 'categorie_destinataire', 'siret', 'adresse_siege', 'objet_prestation', 'mention_tva', 'eip712_signature', 'valeur_ht_fiat', 'falcon_signature', 'falcon_algorithm', 'falcon_standard', 'falcon_nist_level', 'falcon_public_key', 'ml_dsa_signature', 'ml_dsa_algorithm', 'ml_dsa_standard', 'ml_dsa_nist_level', 'ml_dsa_public_key', 'slh_dsa_signature', 'slh_dsa_algorithm', 'slh_dsa_standard', 'slh_dsa_nist_level', 'slh_dsa_public_key', 'ml_kem_ciphertext', 'ml_kem_shared_secret', 'ml_kem_algorithm'].forEach(k => delete c[k]);
         return c;
     }
 
-    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, falconSig = null) {
-        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig);
+    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, falconSig = null, pqcResults = null) {
+        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, pqcResults);
         const client = buildClientData(full);
         const qrD = { hash: h, from, to, amount: amtStr || `${amt} ${sym}`, date: ts, explorer: getExplorerUrl(h), usd: usdValue };
         const qrURL = await qrDataURL(JSON.stringify(qrD));
@@ -765,6 +787,18 @@ async function initApp() {
                 }
             }
 
+            // === ÉTAPE 2.5: PQC auto-sign (all checked algorithms) ===
+            let pqcResults = null;
+            if (window.pqcAutoSign) {
+                try {
+                    pqcResults = await window.pqcAutoSign(tx.hash, fromDomainName);
+                    const signed = Object.keys(pqcResults);
+                    if (signed.length > 0) {
+                        els.txStatus.innerHTML += `<br>🔐 PQC: ${signed.join(', ')} signé(s)`;
+                    }
+                } catch(e) { console.warn('PQC auto-sign failed:', e); }
+            }
+
             // === ÉTAPE 3: EIP-712 (signature classique du reçu) ===
             let eipSig = null;
             try {
@@ -785,7 +819,7 @@ async function initApp() {
                     originalFrom: d.from, originalTo: d.to,
                     invoiceNumber: d.invoiceNumber, timestampUTC: d.timestampUTC,
                     usdcValue: d.usdcValue, catFrom: fromCat, catTo: toCat, amtStr: null,
-                    signature: eipSig, falconSignature: falconSig,
+                    signature: eipSig, falconSignature: falconSig, pqcResults: pqcResults,
                 };
                 const receiptBtn = document.getElementById('receiptBtn');
                 receiptBtn.disabled = false; receiptBtn.classList.add('ready');
@@ -922,7 +956,7 @@ async function initApp() {
         if (!data) { alert("Aucune transaction récente."); return; }
         let signature = data.signature;
         if (!signature) { const result = await attemptAutoSign(); if (result) signature = result; if (signature) window._lastTxData.signature = signature; }
-        await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature);
+        await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature, data.pqcResults);
         alert("Facture générée. Utilisez les boutons ci-dessous pour l'imprimer ou la télécharger.");
     });
 
