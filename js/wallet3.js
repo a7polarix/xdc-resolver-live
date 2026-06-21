@@ -210,16 +210,22 @@ async function initApp() {
     async function resolveDomain(domain) {
         if (domain.startsWith('0x') && domain.length === 42) return domain;
         try {
-            const r = await fetchWithTimeout(`https://fleurs-resolver-final.vercel.app/api/resolve?domain=${encodeURIComponent(domain)}`, 10000);
+            const r = await fetchWithTimeout(
+                `https://fleurs-resolver-final.vercel.app/api/resolve?domain=${encodeURIComponent(domain)}`,
+                10000
+            );
             if (r.ok) { const d = await r.json(); if (d.result) return d.result; }
         } catch (e) {}
         if (currentNetwork === 'xdc') {
             try {
                 const p = new ethers.JsonRpcProvider(getRpcUrl());
-                // Use getDomainInfo to get the OWNER address, not getAddress (returns resolver/contract)
-                const c = new ethers.Contract(NETWORKS.xdc.contractAddr, ["function getDomainInfo(string name) view returns (tuple(address owner, address resolver, uint256 expiry))"], p);
-                const info = await c.getDomainInfo(domain.toLowerCase().trim());
-                if (info.owner && info.owner !== "0x0000000000000000000000000000000000000000") return info.owner;
+                const c = new ethers.Contract(
+                    NETWORKS.xdc.contractAddr,
+                    ["function getOwner(string name) view returns (address)"],
+                    p
+                );
+                const owner = await c.getOwner(domain.toLowerCase().trim());
+                if (owner && owner !== "0x0000000000000000000000000000000000000000") return owner;
             } catch (e) {}
         }
         throw new Error("Domaine non résolu : " + domain);
