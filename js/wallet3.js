@@ -99,6 +99,16 @@ window.addEventListener('load', () => {
 async function initApp() {
     let provider = null, signer = null, userAddress = null;
 
+    // ==================== UI HELPERS ====================
+    function setReceiptBtnReady() {
+        const rb = document.getElementById('receiptBtn');
+        if (rb) { rb.disabled = false; rb.classList.remove('neutral'); rb.classList.add('ready'); }
+    }
+    function setReceiptBtnNeutral() {
+        const rb = document.getElementById('receiptBtn');
+        if (rb) { rb.classList.remove('ready'); rb.classList.add('neutral'); }
+    }
+
     // ==================== CACHE LOCAL ====================
     const domainCache = {
         set(address, domain) { if (!address || !domain) return; let c = JSON.parse(localStorage.getItem('fl_domain_cache') || '{}'); c[address.toLowerCase()] = domain; localStorage.setItem('fl_domain_cache', JSON.stringify(c)); },
@@ -801,7 +811,7 @@ async function initApp() {
                     signature: eipSig, falconSignature: null, pqcResults: pqcResults,
                 };
                 const receiptBtn = document.getElementById('receiptBtn');
-                receiptBtn.disabled = false; receiptBtn.classList.add('ready');
+                setReceiptBtnReady();
                 els.txStatus.innerHTML += '<br>📄 Cliquez sur "Reçu EIP" pour générer la facture.';
                 els.amount.value = '';
                 updateSendBtnState();
@@ -857,7 +867,7 @@ async function initApp() {
 
             window._lastTxData = { hash: tx.hash, amount: amt, symbol: tok, from: fromDisp, to: "fleursdelys.xdc", originalFrom: d.from, originalTo: d.to, invoiceNumber: d.invoiceNumber, timestampUTC: d.timestampUTC, usdcValue: d.usdcValue, catFrom: fromCat, catTo: "Trésorerie", amtStr: null, signature: null, falconSignature: falconSig };
             const receiptBtn = document.getElementById('receiptBtn');
-            receiptBtn.disabled = false; receiptBtn.classList.add('ready');
+            setReceiptBtnReady();
             els.donateStatus.innerHTML += '<br>📄 Cliquez sur "Reçu EIP" pour générer la facture.';
         } catch (e) { els.donateStatus.innerHTML = `❌ ${e.message}`; }
     }
@@ -921,7 +931,7 @@ async function initApp() {
             addTxEntry({ type: 'outgoing', from: domainName, to: targetDisplay, amount: '1', token: 'NFT', hash: tx.hash, usdcValue: usdValueStr, siret: document.getElementById('siretField').value.trim(), tva: document.getElementById('tvaField').value, catEmetteur: fromCat, catDestinataire: toCat });
             window._lastTxData = { hash: tx.hash, amount: 1, symbol: 'NFT', from: domainName, to: targetDisplay, originalFrom: userAddress, originalTo: targetAddress, invoiceNumber, timestampUTC, usdcValue: usdValueStr, catFrom: fromCat, catTo: toCat, amtStr: '1 NFT', signature: null, falconSignature: falconSig };
             const receiptBtn = document.getElementById('receiptBtn');
-            receiptBtn.disabled = false; receiptBtn.classList.add('ready');
+            setReceiptBtnReady();
             els.sendDomainStatus.innerHTML += '<br>📄 Cliquez sur "Reçu EIP" pour générer la facture.';
             if (typeof detectAndShowMainLocation === 'function') detectAndShowMainLocation();
             els.sendDomainName.value = ''; els.sendDomainTo.value = '';
@@ -937,9 +947,7 @@ async function initApp() {
         if (!signature) { const result = await attemptAutoSign(); if (result) signature = result; if (signature) window._lastTxData.signature = signature; }
         await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature, data.pqcResults);
         alert("Facture générée. Utilisez les boutons ci-dessous pour l'imprimer ou la télécharger.");
-        // Reset button state to neutral
-        const rb = document.getElementById('receiptBtn');
-        if (rb) { rb.classList.remove('ready'); rb.classList.add('neutral'); }
+        setReceiptBtnNeutral();
     });
 
     // ==================== VERIFY HASH ====================
@@ -953,6 +961,8 @@ async function initApp() {
             const fromDomain = domainCache.get(from), toDomain = domainCache.get(to);
             els.invoiceAmount.value = amount; els.invoiceSymbol.value = symbol; els.invoiceSymbol.disabled = true;
             els.invoiceFrom.value = fromDomain || from; els.invoiceTo.value = toDomain || to;
+            // Clear hash field immediately for next verification
+            els.invoiceHash.value = '';
             alert(`✅ Vérifié : ${amount} ${symbol} (≈${usdcValue} USD)`);
             window._lastTxData = { hash: h, amount, symbol, from: fromDomain || from, to: toDomain || to, originalFrom: from, originalTo: to, invoiceNumber, timestampUTC, usdcValue, catFrom: await getDomainCategory(fromDomain || from), catTo: await getDomainCategory(toDomain || to), amtStr: `${amount} ${symbol}`, signature: null, falconSignature: null };
             document.getElementById('signEipInvoiceBtn').style.display = 'inline-block';
@@ -984,13 +994,14 @@ async function initApp() {
         try {
             const signature = await signer.signTypedData(domain, types, message);
             document.getElementById('eipResult').innerHTML = `✅ Facture signée !<br><small>Signature: ${signature.substring(0, 40)}...</small>`;
-            const receiptBtn = document.getElementById('receiptBtn'); receiptBtn.disabled = false; receiptBtn.classList.add('ready');
+            setReceiptBtnReady();
             window._signedReceipt = { p, signature, domain, types, message };
             if (window._lastTxData) {
                 window._lastTxData.signature = signature;
                 window._lastTxData.eip712 = { domain, types, message, primaryType: "Facture" };
             }
             await displayInvoice(p.hash, p.amount, p.from, p.to, p.symbol, p.invoiceNumber, p.timestampUTC, p.catFrom, p.catTo, p.amtStr, p.usdcValue, signature, p.falconSignature);
+            setReceiptBtnNeutral();
         } catch (e) { document.getElementById('eipResult').innerText = `❌ Erreur : ${e.message}`; }
     });
 
