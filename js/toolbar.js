@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
         const saved = getPqcChoices();
         const checkboxes = algos.map(a => {
-            const checked = saved[a.id] !== undefined ? saved[a.id] : (a.id === 'falcon');
+            const checked = saved[a.id] !== undefined ? saved[a.id] : true;
             return `<label style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0;cursor:pointer;">
                 <input type="checkbox" id="pqc_${a.id.replace('-','')}" ${checked ? 'checked' : ''} style="cursor:pointer;">
                 <span style="font-size:1.2rem;">${a.icon}</span>

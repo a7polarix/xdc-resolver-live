@@ -567,6 +567,13 @@ async function initApp() {
         }
         // Add PQC signatures from auto-sign results
         if (pqcResults) {
+            if (pqcResults.falcon) {
+                f.falcon_signature = pqcResults.falcon.signature;
+                f.falcon_algorithm = `${pqcResults.falcon.algorithm}-${pqcResults.falcon.variant}`;
+                f.falcon_standard = pqcResults.falcon.standard;
+                f.falcon_nist_level = pqcResults.falcon.nistLevel;
+                f.falcon_public_key = pqcResults.falcon.publicKey;
+            }
             if (pqcResults.mldsa) {
                 f.ml_dsa_signature = pqcResults.mldsa.signature;
                 f.ml_dsa_algorithm = `${pqcResults.mldsa.algorithm}-${pqcResults.mldsa.variant}`;
@@ -757,8 +764,6 @@ async function initApp() {
             await tx.wait();
             els.txStatus.innerHTML += '<br>✅ Succès !';
 
-            els.txStatus.innerHTML += '<br>✅ Succès !';
-
             // === ÉTAPE 2: PQC auto-sign (all checked algorithms incl. FALCON) ===
             let pqcResults = null;
             if (window.pqcAutoSign) {
@@ -932,6 +937,9 @@ async function initApp() {
         if (!signature) { const result = await attemptAutoSign(); if (result) signature = result; if (signature) window._lastTxData.signature = signature; }
         await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature, data.pqcResults);
         alert("Facture générée. Utilisez les boutons ci-dessous pour l'imprimer ou la télécharger.");
+        // Reset button state
+        const rb = document.getElementById('receiptBtn');
+        if (rb) { rb.classList.remove('ready'); rb.style.background = ''; }
     });
 
     // ==================== VERIFY HASH ====================
@@ -949,6 +957,8 @@ async function initApp() {
             window._lastTxData = { hash: h, amount, symbol, from: fromDomain || from, to: toDomain || to, originalFrom: from, originalTo: to, invoiceNumber, timestampUTC, usdcValue, catFrom: await getDomainCategory(fromDomain || from), catTo: await getDomainCategory(toDomain || to), amtStr: `${amount} ${symbol}`, signature: null, falconSignature: null };
             document.getElementById('signEipInvoiceBtn').style.display = 'inline-block';
             document.getElementById('receiptBtn').disabled = false; document.getElementById('receiptBtn').classList.add('ready');
+            // Clear hash field for next verification
+            els.invoiceHash.value = '';
         } catch (e) { alert("Erreur : " + e.message); }
     };
 
