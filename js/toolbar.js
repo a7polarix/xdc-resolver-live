@@ -239,113 +239,97 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---- FALCON POST-QUANTUM PANEL ----
+    // ---- FALCON POST-QUANTUM PANEL (checkboxes, user chooses) ----
     function openFalconPanel() {
+        const algos = [
+            { id: 'falcon', label: 'FALCON-512', icon: '🐦', desc: 'NIST FIPS 206 — Lattice signature (~650B)' },
+            { id: 'ml-dsa', label: 'ML-DSA-65', icon: '💎', desc: 'NIST FIPS 204 — Lattice signature (~3.3KB)' },
+            { id: 'slh-dsa', label: 'SLH-DSA-128s', icon: '🌲', desc: 'NIST FIPS 205 — Hash-based sig (~7.8KB)' },
+            { id: 'ml-kem', label: 'ML-KEM-512', icon: '🔑', desc: 'NIST FIPS 203 — Key encapsulation (KEM)' },
+        ];
+        const checkboxes = algos.map(a =>
+            `<label style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0;cursor:pointer;">
+                <input type="checkbox" id="pqc_${a.id.replace('-','')}" ${a.id==='falcon'?'checked':''} style="cursor:pointer;">
+                <span style="font-size:1.2rem;">${a.icon}</span>
+                <div><b>${a.label}</b><br><small style="color:#888;">${a.desc}</small></div>
+            </label>`
+        ).join('');
+
         showPanel(`<div class="falcon-panel">
             <h3>🔐 Cryptographie Post-Quantique</h3>
-            <p>Signatures résistantes aux attaques quantiques — Standards NIST PQC</p>
-            <h4>Algorithme</h4>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;">
-                <button id="pqcAlgoFalcon" style="padding:0.5rem;background:#38a169;color:white;border:none;border-radius:8px;cursor:pointer;">🐦 FALCON-512</button>
-                <button id="pqcAlgoDilithium" style="padding:0.5rem;background:#2c3e4e;color:white;border:none;border-radius:8px;cursor:pointer;">💎 ML-DSA-65</button>
-                <button id="pqcAlgoKyber" style="padding:0.5rem;background:#2c3e4e;color:white;border:none;border-radius:8px;cursor:pointer;">🔑 ML-KEM-512</button>
-                <button id="pqcAlgoSphincs" style="padding:0.5rem;background:#2c3e4e;color:white;border:none;border-radius:8px;cursor:pointer;">🌲 SLH-DSA-128s</button>
-            </div>
-            <div id="pqcKeyInfo" style="font-size:0.7rem;background:rgba(0,0,0,0.1);padding:0.5rem;border-radius:8px;margin-bottom:0.5rem;"></div>
-            <h4 id="pqcActionLabel">Signer un message</h4>
-            <input type="text" id="pqcMessage" placeholder="Message..." style="width:100%;padding:0.4rem;border-radius:8px;border:1px solid #cfdde6;margin-bottom:0.5rem;">
-            <button id="pqcActionBtn" class="primary" style="width:100%;">✍️ Signer</button>
-            <div id="pqcOutput" style="font-size:0.7rem;word-break:break-all;background:rgba(0,0,0,0.1);padding:0.5rem;border-radius:8px;max-height:120px;overflow-y:auto;margin-top:0.5rem;"></div>
-            <hr><small>NIST FIPS 206, 204, 203, 205</small>
+            <p>Cochez les algorithmes désirés, entrez un message, puis cliquez Signer.</p>
+            <h4>Algorithmes</h4>
+            <div style="margin-bottom:1rem;">${checkboxes}</div>
+            <h4>Message</h4>
+            <input type="text" id="pqcMessage" placeholder="Message à signer / optionnel pour KEM..." style="width:100%;padding:0.4rem;border-radius:8px;border:1px solid #cfdde6;margin-bottom:0.5rem;">
+            <button id="pqcSignBtn" class="primary" style="width:100%;">✍️ Signer les algorithmes cochés</button>
+            <div id="pqcOutput" style="font-size:0.7rem;word-break:break-all;background:rgba(0,0,0,0.1);padding:0.5rem;border-radius:8px;max-height:150px;overflow-y:auto;margin-top:0.5rem;"></div>
         </div>`);
 
-        let currentAlgo = 'falcon';
-        const algoMap = { pqcAlgoFalcon: 'falcon', pqcAlgoDilithium: 'ml-dsa', pqcAlgoKyber: 'ml-kem', pqcAlgoSphincs: 'slh-dsa' };
-        const kemAlgos = ['ml-kem'];
-
-        function updateUI() {
-            const isKem = kemAlgos.includes(currentAlgo);
-            document.getElementById('pqcActionLabel').textContent = isKem ? 'Encapsuler un secret partagé' : 'Signer un message';
-            document.getElementById('pqcActionBtn').textContent = isKem ? '🔒 Encapsuler' : '✍️ Signer';
-            document.getElementById('pqcMessage').placeholder = isKem ? 'Optionnel : contexte...' : 'Message à signer...';
-            // Show stored key info
-            const stored = localStorage.getItem(`pqc_keys_${currentAlgo}`);
-            if (stored) {
-                const k = JSON.parse(stored);
-                document.getElementById('pqcKeyInfo').innerHTML = `🔑 Clés stockées — PK: ${k.publicKeyBytes}B | ${k.generatedAt}`;
-            } else {
-                document.getElementById('pqcKeyInfo').innerHTML = '⚠️ Aucune clé — clic sur Signer/Encapsuler pour générer automatiquement';
-            }
-        }
-
-        Object.entries(algoMap).forEach(([id, algo]) => {
-            document.getElementById(id)?.addEventListener('click', () => {
-                currentAlgo = algo;
-                Object.keys(algoMap).forEach(k => { const b = document.getElementById(k); if(b) b.style.background = '#2c3e4e'; });
-                document.getElementById(id).style.background = '#38a169';
-                updateUI();
-            });
-        });
-
-        document.getElementById('pqcActionBtn')?.addEventListener('click', async () => {
+        document.getElementById('pqcSignBtn')?.addEventListener('click', async () => {
             const msg = document.getElementById('pqcMessage').value || 'default';
-            const isKem = kemAlgos.includes(currentAlgo);
-            document.getElementById('pqcOutput').textContent = '⏳ Traitement...';
+            const output = document.getElementById('pqcOutput');
+            output.textContent = '';
 
-            try {
-                // Step 1: Generate keys if not stored
-                let stored = localStorage.getItem(`pqc_keys_${currentAlgo}`);
-                if (!stored) {
-                    document.getElementById('pqcOutput').textContent = '⏳ Génération des clés (1er usage)...';
-                    const genR = await fetch('/api/pqc.js', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'keys', algorithm: currentAlgo })
-                    });
-                    const genD = await genR.json();
-                    if (!genD.success) { document.getElementById('pqcOutput').textContent = `❌ ${genD.error}`; return; }
-                    // Store keys locally
-                    localStorage.setItem(`pqc_keys_${currentAlgo}`, JSON.stringify({
-                        publicKey: genD.publicKey,
-                        secretKey: genD.secretKey,
-                        publicKeyBytes: genD.publicKeyBytes,
-                        generatedAt: new Date().toISOString()
-                    }));
-                    document.getElementById('pqcOutput').textContent = '✅ Clés générées et stockées. Re-cliquez pour signer/encapsuler.';
-                    updateUI();
-                    return;
-                }
+            for (const algo of algos) {
+                const checked = document.getElementById(`pqc_${algo.id.replace('-','')}`).checked;
+                if (!checked) continue;
 
-                const keys = JSON.parse(stored);
+                const isKem = algo.id === 'ml-kem';
+                output.innerHTML += `<br>⏳ ${algo.label}...`;
 
-                if (isKem) {
-                    // ML-KEM: encapsulate
-                    const actionR = await fetch('/api/pqc.js', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'quantum', operation: 'encapsulate', publicKey: keys.publicKey, algorithm: currentAlgo })
-                    });
-                    const actionD = await actionR.json();
-                    if (actionD.success) {
-                        document.getElementById('pqcOutput').innerHTML = `✅ Encapsulé (${currentAlgo}):<br>CT: ${actionD.ciphertext.slice(0,64)}...<br>SS: ${actionD.sharedSecret.slice(0,32)}...`;
-                    } else {
-                        document.getElementById('pqcOutput').textContent = `❌ ${actionD.error}`;
+                try {
+                    // Generate keys if not stored
+                    let stored = localStorage.getItem(`pqc_keys_${algo.id}`);
+                    if (!stored) {
+                        if (algo.id === 'falcon') {
+                            // FALCON uses server master key, no client key gen needed
+                        } else {
+                            const genR = await fetch('/api/pqc.js', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'keys', algorithm: algo.id, variant: algo.id === 'ml-dsa' ? 'ml_dsa65' : algo.id === 'slh-dsa' ? 'slh_dsa_sha2_128s' : 'ml_kem512' })
+                            });
+                            const genD = await genR.json();
+                            if (!genD.success) { output.innerHTML += `<br>❌ ${algo.label}: ${genD.error}`; continue; }
+                            localStorage.setItem(`pqc_keys_${algo.id}`, JSON.stringify({
+                                publicKey: genD.publicKey,
+                                secretKey: genD.secretKey,
+                                publicKeyBytes: genD.publicKeyBytes,
+                                generatedAt: new Date().toISOString()
+                            }));
+                        }
                     }
-                } else {
-                    // Sign algorithms: FALCON, ML-DSA, SLH-DSA
-                    const actionR = await fetch('/api/pqc.js', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'sign', message: msg, algorithm: currentAlgo, secretKey: keys.secretKey })
-                    });
-                    const actionD = await actionR.json();
-                    if (actionD.success) {
-                        document.getElementById('pqcOutput').innerHTML = `✅ Signé (${actionD.algorithm}):<br>Sig: ${actionD.signature.slice(0,80)}...<br>Sig bytes: ${actionD.signatureBytes}`;
+
+                    if (isKem) {
+                        const keys = JSON.parse(localStorage.getItem(`pqc_keys_${algo.id}`));
+                        const encR = await fetch('/api/pqc.js', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'quantum', operation: 'encapsulate', publicKey: keys.publicKey, algorithm: algo.id })
+                        });
+                        const encD = await encR.json();
+                        output.innerHTML += encD.success
+                            ? `<br>✅ ${algo.label}: CT=${encD.ciphertext.slice(0,40)}... SS=${encD.sharedSecret.slice(0,20)}...`
+                            : `<br>❌ ${algo.label}: ${encD.error}`;
                     } else {
-                        document.getElementById('pqcOutput').textContent = `❌ ${actionD.error}`;
+                        const body = { action: 'sign', message: msg, algorithm: algo.id };
+                        if (algo.id !== 'falcon') {
+                            const keys = JSON.parse(localStorage.getItem(`pqc_keys_${algo.id}`));
+                            body.secretKey = keys.secretKey;
+                        }
+                        const sigR = await fetch('/api/pqc.js', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+                        const sigD = await sigR.json();
+                        output.innerHTML += sigD.success
+                            ? `<br>✅ ${algo.label}: Sig=${sigD.signature.slice(0,50)}... (${sigD.signatureBytes}B)`
+                            : `<br>❌ ${algo.label}: ${sigD.error}`;
                     }
+                } catch (e) {
+                    output.innerHTML += `<br>❌ ${algo.label}: erreur réseau`;
                 }
-            } catch (e) { document.getElementById('pqcOutput').textContent = '❌ Erreur réseau.'; }
+            }
         });
-
-        updateUI();
     }
 
     // ===== GESTIONNAIRE DE CLICS PRINCIPAL =====
