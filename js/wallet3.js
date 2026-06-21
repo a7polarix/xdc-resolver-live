@@ -147,6 +147,52 @@ async function initApp() {
         if (e.target && e.target.id === 'falconTxEnabled') syncFalconToggle();
     });
 
+    // ==================== CATEGORY BUTTONS ====================
+    const categoryButtons = document.querySelectorAll('[data-category]');
+    const categoryResult = document.getElementById('categoryResult');
+    const categoryResultContent = document.getElementById('categoryResultContent');
+    const closeCategoryBtn = document.getElementById('closeCategoryResult');
+
+    categoryButtons.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const category = btn.dataset.category;
+            if (!category) return;
+            if (btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                if (categoryResult) categoryResult.classList.remove('show');
+                return;
+            }
+            categoryButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (categoryResultContent) {
+                categoryResultContent.innerHTML = `📂 Chargement de la catégorie ${category}...`;
+            }
+            if (categoryResult) categoryResult.classList.add('show');
+            try {
+                const r = await fetch(`/api/domains?category=${encodeURIComponent(category)}`);
+                if (r.ok) {
+                    const data = await r.json();
+                    if (data.domains && data.domains.length > 0) {
+                        categoryResultContent.innerHTML = `📂 Catégorie ${category} :<br>✅ ${data.domains.slice(0, 50).join('<br>✅ ')}${data.domains.length > 50 ? `<br>... et ${data.domains.length - 50} autres` : ''}`;
+                    } else {
+                        categoryResultContent.innerHTML = `📂 Catégorie ${category} : aucun domaine trouvé.`;
+                    }
+                } else {
+                    categoryResultContent.innerHTML = `📂 Catégorie ${category} : erreur de chargement.`;
+                }
+            } catch (e) {
+                categoryResultContent.innerHTML = `📂 Catégorie ${category} : erreur réseau.`;
+            }
+        });
+    });
+
+    if (closeCategoryBtn) {
+        closeCategoryBtn.addEventListener('click', () => {
+            categoryButtons.forEach(b => b.classList.remove('active'));
+            if (categoryResult) categoryResult.classList.remove('show');
+        });
+    }
+
     // ==================== ORACLE ====================
     let oracleRawAnswer = null, oracleDecimals = 8, oraclePrice = null;
     const oraclePriceDisplay = document.getElementById('oraclePriceDisplay');
