@@ -15,7 +15,7 @@ let classifiedDomains = null;
 function loadDomains() {
   if (classifiedDomains) return classifiedDomains;
   try {
-    const raw = readFileSync(join(__dirname, '..', 'modules', 'web3-domains', 'xdc_domains_classified.json'), 'utf8');
+    const raw = readFileSync(join(__dirname, '..', 'data', 'xdc_domains_classified.json'), 'utf8');
     classifiedDomains = JSON.parse(raw);
   } catch (e) {
     console.error('[DOMAINS] Failed to load classified domains:', e.message);

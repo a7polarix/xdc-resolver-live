@@ -351,12 +351,6 @@ async function initApp() {
         const domain = { name: "XDC Retail Receipt", version: "1", chainId: currentNetwork === 'xdc' ? 50 : 1, verifyingContract: NETWORKS.xdc.contractAddr || "0x0000000000000000000000000000000000000000" };
         const message = { from: fromAddr, to: toAddr, amount: ethers.parseUnits(String(p.amount), 18).toString(), txHash: p.hash, invoiceNumber: p.invoiceNumber, date: p.timestampUTC };
         const types = {
-            EIP712Domain: [
-                { name: "name", type: "string" },
-                { name: "version", type: "string" },
-                { name: "chainId", type: "uint256" },
-                { name: "verifyingContract", type: "address" }
-            ],
             Facture: [
                 { name: "from", type: "address" },
                 { name: "to", type: "address" },
@@ -802,12 +796,6 @@ async function initApp() {
         const domain = { name: "XDC Retail Receipt", version: "1", chainId: currentNetwork === 'xdc' ? 50 : 1, verifyingContract: NETWORKS.xdc.contractAddr || "0x0000000000000000000000000000000000000000" };
         const message = { from: fromAddr, to: toAddr, amount: ethers.parseUnits(String(p.amount), 18).toString(), txHash: p.hash, invoiceNumber: p.invoiceNumber, date: p.timestampUTC };
         const types = {
-            EIP712Domain: [
-                { name: "name", type: "string" },
-                { name: "version", type: "string" },
-                { name: "chainId", type: "uint256" },
-                { name: "verifyingContract", type: "address" }
-            ],
             Facture: [
                 { name: "from", type: "address" },
                 { name: "to", type: "address" },
