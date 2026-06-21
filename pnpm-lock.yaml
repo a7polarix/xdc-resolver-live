@@ -26,6 +26,9 @@ importers:
       ethers:
         specifier: ^6.16.0
         version: 6.16.0
+      xdcdomainjs:
+        specifier: ^1.0.2
+        version: 1.0.2
       xrpl:
         specifier: ^4.6.0
         version: 4.6.0
@@ -698,6 +701,9 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  xdcdomainjs@1.0.2:
+    resolution: {integrity: sha512-G00O1voT4XxIltKcxC52Ndg/JkUdaemNMJ+9KDNNUgzGXb27lO5CHWZ53hwbqLFYDCWf0EO6wNnLJTYNWvMkTg==}
 
   xrpl-secret-numbers@0.3.5:
     resolution: {integrity: sha512-5W2Ijp4nFpplEJ4IEK8JNAnRN9+3/+8BdBQ0hOZ3bZfa/+K9c9GNdN5fHDkKoECJN3nzXNcj6/Ejg7wUQDtRnQ==}
@@ -1561,6 +1567,8 @@ snapshots:
       bs58check: 2.1.2
 
   ws@8.21.0: {}
+
+  xdcdomainjs@1.0.2: {}
 
   xrpl-secret-numbers@0.3.5:
     dependencies:
