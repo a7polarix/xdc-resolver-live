@@ -487,10 +487,24 @@ async function initApp() {
         els.txStatus.innerHTML = "🔍 Vérification du domaine émetteur...";
         try {
             if (fromDomainName && !fromDomainName.startsWith('0x')) {
-                // Domain ownership check: resolve domain and verify it belongs to connected wallet
-                // SKIP for now — domain registration on-chain may not match connected wallet
-                // The wallet signer already proves ownership of the sending address
-                console.log('[RESOLVE] Skipping domain ownership check for:', fromDomainName);
+                // Verify domain ownership: check that connected wallet owns the domain in XWD contract
+                els.txStatus.innerHTML = "🔍 Vérification de la propriété du domaine...";
+                try {
+                    const p = new ethers.JsonRpcProvider(getRpcUrl());
+                    const c = new ethers.Contract(NETWORKS.xdc.contractAddr, ["function getDomainInfo(string name) view returns (tuple(address owner, address resolver, uint256 expiry))"], p);
+                    const info = await c.getDomainInfo(fromDomainName.toLowerCase().trim());
+                    if (info.owner === ethers.ZeroAddress) {
+                        els.txStatus.innerHTML = "❌ Le domaine émetteur n'est pas enregistré.";
+                        return;
+                    }
+                    if (info.owner.toLowerCase() !== userAddress.toLowerCase()) {
+                        els.txStatus.innerHTML = "❌ Le domaine émetteur ne vous appartient pas. Propriétaire: " + info.owner.slice(0,10) + "... vs Votre wallet: " + userAddress.slice(0,10) + "...";
+                        return;
+                    }
+                } catch(e) {
+                    console.warn('[XWD] Domain ownership check failed:', e.message);
+                    // If XWD contract call fails, skip check (domain may use different registry)
+                }
             } else if (fromDomainName && fromDomainName.startsWith('0x')) {
                 // Direct address — use as-is
             } else { els.txStatus.innerHTML = "❌ Vous devez spécifier un domaine émetteur valide."; return; }
