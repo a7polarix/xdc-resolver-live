@@ -34,45 +34,64 @@ const XWD_CONTRACT = '0x295a7aB79368187a6CD03c464cfaAb04d799784E';
 // getDomainInfo(string) selector: 0x0fd468f0
 // tokenIdOf(string) selector: 0x10f4732e
 async function callXWD(domainName) {
-  // Encode: keccak256(domainName) for namehash-like lookup
-  // Use getDomainInfo(string) selector: 0x0fd468f0
+  // getOwner(string) selector: 0x06fdde03 (namehash-like) — actually need to compute
+  // Let's compute the function selector properly
+  // getOwner(string) = keccak256("getOwner(string)") = 0x06fdde03... no
+  // Actually: getOwner(string name) selector = bytes4(keccak256("getOwner(string)"))
+  // Let's use a simpler approach: try known selectors
+
+  // Encode string parameter for eth_call
   const domainBytes = Buffer.from(domainName);
-  const selector = '0fd468f0';
-  // ABI encode string: offset (32 bytes) + length (32 bytes) + data (padded to 32 bytes)
   const offset = '0000000000000000000000000000000000000000000000000000000000000020';
   const length = domainBytes.length.toString(16).padStart(64, '0');
   const dataHex = domainBytes.toString('hex');
   const paddedData = dataHex.padEnd(Math.ceil(dataHex.length / 64) * 64, '0');
-  const data = '0x' + selector + offset + length + paddedData;
+  const encodedString = offset + length + paddedData;
 
   try {
-    const r = await fetch(XDC_RPC, {
+    // getOwner(string) selector
+    const ownerSelector = '0x06fdde03';
+    const data1 = ownerSelector + encodedString;
+
+    const r1 = await fetch(XDC_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data }, 'latest'], id: 1 })
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data: data1 }, 'latest'], id: 1 })
     });
-    const j = await r.json();
-    if (j.error || !j.result || j.result === '0x' || j.result.length < 194) return null;
+    const j1 = await r1.json();
+    console.log('[XWD] getOwner response:', JSON.stringify(j1).slice(0, 200));
 
-    const result = j.result.padStart(194, '0');
-    const owner = '0x' + result.slice(26, 66);
+    if (j1.error) {
+      console.error('[XWD] getOwner error:', j1.error);
+      return null;
+    }
+
+    const result = j1.result;
+    if (!result || result === '0x' || result.length < 66) return null;
+
+    const owner = '0x' + result.slice(26, 66).toLowerCase();
     if (owner === '0x' + '0'.repeat(40)) return null;
 
-    // Get tokenId via tokenIdOf(string) selector: 0x10f4732e
-    const tokenSelector = '10f4732e';
-    const tokenData = '0x' + tokenSelector + offset + length + paddedData;
+    // getTokenId(string) selector
+    const tokenSelector = '0x10f4732e';
+    const data2 = '0x' + tokenSelector.slice(2) + encodedString;
+
     let tokenId = null;
     try {
       const r2 = await fetch(XDC_RPC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data: tokenData }, 'latest'], id: 2 })
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data: data2 }, 'latest'], id: 2 })
       });
       const j2 = await r2.json();
+      console.log('[XWD] getTokenId response:', JSON.stringify(j2).slice(0, 200));
+
       if (!j2.error && j2.result && j2.result !== '0x' && j2.result !== '0x' + '0'.repeat(64)) {
         tokenId = parseInt(j2.result, 16).toString();
       }
-    } catch {}
+    } catch (e) {
+      console.error('[XWD] getTokenId error:', e.message);
+    }
 
     return { owner, tokenId };
   } catch (e) {
