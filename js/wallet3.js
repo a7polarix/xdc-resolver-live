@@ -937,9 +937,9 @@ async function initApp() {
         if (!signature) { const result = await attemptAutoSign(); if (result) signature = result; if (signature) window._lastTxData.signature = signature; }
         await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature, data.pqcResults);
         alert("Facture générée. Utilisez les boutons ci-dessous pour l'imprimer ou la télécharger.");
-        // Reset button state
+        // Reset button state to neutral
         const rb = document.getElementById('receiptBtn');
-        if (rb) { rb.classList.remove('ready'); rb.style.background = ''; }
+        if (rb) { rb.classList.remove('ready'); rb.classList.add('neutral'); }
     });
 
     // ==================== VERIFY HASH ====================
