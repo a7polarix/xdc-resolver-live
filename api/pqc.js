@@ -25,57 +25,45 @@ import {
 } from './falcon.js';
 
 // ============================================================
-// XWD Domain Resolution via xdcdomainjs SDK
+// XWD Domain Resolution via ethers.js
 // ============================================================
-const domainjs = require('xdcdomainjs');
+const { ethers } = require('ethers');
 
-const sdkConfig = {
-    mainnet: {
-        rpcUrl: "https://rpc.xdcrpc.com",
-        contractAddress: "xdc295a7ab79368187a6cd03c464cfaab04d799784e"
-    },
-    defaultNetwork: "mainnet"
-};
+const XDC_RPC = 'https://rpc.xdcrpc.com';
+const XWD_CONTRACT = '0x295a7aB79368187a6CD03c464cfaAb04d799784E';
+const XWD_ABI = [
+    'function getOwner(string) view returns (address)',
+    'function getTokenId(string) view returns (uint256)'
+];
 
-let sdkInstance = null;
-function getSDK() {
-    if (!sdkInstance) {
-        try {
-            sdkInstance = domainjs.SDK(sdkConfig);
-        } catch (e) {
-            console.error('[XWD-SDK] Init error:', e.message);
-        }
+let provider = null;
+let contract = null;
+
+function getContract() {
+    if (!contract) {
+        provider = new ethers.JsonRpcProvider(XDC_RPC);
+        contract = new ethers.Contract(XWD_CONTRACT, XWD_ABI, provider);
     }
-    return sdkInstance;
+    return contract;
 }
 
 async function callXWD(domainName) {
-    const sdk = getSDK();
-    if (!sdk) return null;
-
     try {
-        // Normalize domain name (ensure .xdc suffix)
-        let fullName = domainName;
-        if (!fullName.includes('.')) {
-            fullName = fullName + '.xdc';
-        }
+        const c = getContract();
+        const owner = await c.getOwner(domainName);
+        if (!owner || owner === ethers.ZeroAddress) return null;
 
-        // Get owner address
-        const owner = await sdk.getOwner(fullName, false);
-        if (!owner || owner === '0x' + '0'.repeat(40)) return null;
-
-        // Get tokenId
         let tokenId = null;
         try {
-            const tid = await sdk.getTokenId(fullName);
+            const tid = await c.getTokenId(domainName);
             if (tid) tokenId = tid.toString();
         } catch (e) {
-            console.error('[XWD-SDK] getTokenId error:', e.message);
+            console.error('[XWD] getTokenId error:', e.message);
         }
 
         return { owner: owner.toLowerCase(), tokenId };
     } catch (e) {
-        console.error('[XWD-SDK] callXWD error:', e.message);
+        console.error('[XWD] callXWD error:', e.message);
         return null;
     }
 }
