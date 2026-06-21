@@ -121,47 +121,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ===== PQC AUTO-SIGN: Called by wallet3.js during transaction =====
+    // ===== PQC AUTO-SIGN: Uses XWD contract data as deterministic key source =====
     window.pqcAutoSign = async function(txHash, fromDomain) {
         const choices = getPqcChoices();
-        const results = {};
-        const algos = [
-            { id: 'falcon', variant: 'falcon512', isKem: false },
-            { id: 'ml-dsa', variant: 'ml_dsa65', isKem: false },
-            { id: 'slh-dsa', variant: 'slh_dsa_sha2_128s', isKem: false },
-            { id: 'ml-kem', variant: 'ml_kem512', isKem: true },
-        ];
-        for (const algo of algos) {
-            if (!choices[algo.id]) continue;
-            try {
-                if (algo.id === 'falcon') {
-                    // FALCON: server-side master key
-                    const r = await fetch('/api/pqc.js', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ action: 'sign', message: txHash, algorithm: algo.id, variant: algo.variant }) });
-                    const d = await r.json();
-                    if (d.success) results.falcon = { signature: d.signature, algorithm: d.algorithm, variant: d.variant, standard: d.standard, nistLevel: d.nistLevel, publicKey: d.publicKey };
-                } else {
-                    // Client-side keys: generate if not stored
-                    let stored = localStorage.getItem(`pqc_keys_${algo.id}`);
-                    if (!stored) {
-                        const genR = await fetch('/api/pqc.js', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ action: 'keys', algorithm: algo.id, variant: algo.variant }) });
-                        const genD = await genR.json();
-                        if (!genD.success) continue;
-                        localStorage.setItem(`pqc_keys_${algo.id}`, JSON.stringify({ publicKey: genD.publicKey, secretKey: genD.secretKey, publicKeyBytes: genD.publicKeyBytes }));
-                        stored = localStorage.getItem(`pqc_keys_${algo.id}`);
-                    }
-                    const keys = JSON.parse(stored);
-                    if (algo.isKem) {
-                        const encR = await fetch('/api/pqc.js', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ action: 'quantum', operation: 'encapsulate', publicKey: keys.publicKey, algorithm: algo.id }) });
-                        const encD = await encR.json();
-                        if (encD.success) results[algo.id.replace('-','')] = { ciphertext: encD.ciphertext, sharedSecret: encD.sharedSecret, algorithm: algo.id };
-                    } else {
-                        const sigR = await fetch('/api/pqc.js', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ action: 'sign', message: txHash, algorithm: algo.id, variant: algo.variant, secretKey: keys.secretKey }) });
-                        const sigD = await sigR.json();
-                        if (sigD.success) results[algo.id.replace('-','')] = { signature: sigD.signature, algorithm: sigD.algorithm, variant: sigD.variant, standard: sigD.standard, nistLevel: sigD.nistLevel, publicKey: keys.publicKey, signatureBytes: sigD.signatureBytes };
-                    }
-                }
-            } catch(e) { console.warn(`PQC auto-sign ${algo.id} failed:`, e); }
-        }
-        return results;
+        const algos = ['falcon', 'ml-dsa', 'slh-dsa', 'ml-kem'].filter(a => choices[a]);
+        if (algos.length === 0) return {};
+
+        try {
+            const r = await fetch('/api/pqc-receipt.js?action=sign', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ domain: fromDomain, txHash: txHash, algorithms: algos })
+            });
+            const d = await r.json();
+            if (d.success) return d.signatures || {};
+            console.warn('PQC auto-sign failed:', d.error);
+            return {};
+        } catch(e) { console.warn('PQC auto-sign network error:', e); return {}; }
     };
 });
