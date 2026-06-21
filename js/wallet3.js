@@ -346,6 +346,50 @@ async function initApp() {
         } catch (e) { console.warn("FALCON sign failed:", e); return null; }
     }
 
+    // ==================== ML-DSA: SIGNER LE HASH DE TRANSACTION ====================
+    async function signTxWithMLDSA(txHash) {
+        try {
+            // Check if we have stored ML-DSA keys
+            let stored = localStorage.getItem('pqc_keys_ml-dsa');
+            if (!stored) {
+                // Auto-generate keys on first use
+                const genR = await fetch('/api/pqc.js', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'keys', algorithm: 'ml-dsa', variant: 'ml_dsa65' })
+                });
+                const genD = await genR.json();
+                if (!genD.success) { console.warn('ML-DSA key gen failed:', genD.error); return null; }
+                localStorage.setItem('pqc_keys_ml-dsa', JSON.stringify({
+                    publicKey: genD.publicKey,
+                    secretKey: genD.secretKey,
+                    publicKeyBytes: genD.publicKeyBytes,
+                    generatedAt: new Date().toISOString()
+                }));
+                stored = localStorage.getItem('pqc_keys_ml-dsa');
+            }
+            const keys = JSON.parse(stored);
+            // Sign the tx hash
+            const resp = await fetch('/api/pqc.js', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'sign', message: txHash, algorithm: 'ml-dsa', variant: 'ml_dsa65', secretKey: keys.secretKey })
+            });
+            const data = await resp.json();
+            if (data.success && data.signature) {
+                return {
+                    signature: data.signature,
+                    algorithm: 'ml-dsa',
+                    variant: 'ml_dsa65',
+                    standard: data.standard,
+                    nistLevel: data.nistLevel,
+                    publicKey: keys.publicKey,
+                    keyGenerated: true,
+                };
+            }
+            console.warn('ML-DSA sign failed:', data.error);
+            return null;
+        } catch (e) { console.warn('ML-DSA sign failed:', e); return null; }
+    }
+
     // ==================== FALCON: VÉRIFIER UNE SIGNATURE ====================
     async function verifyFalconSignature(txHash, falconSigData) {
         if (!falconSigData || !falconSigData.signature || !falconSigData.publicKey) return null;
@@ -390,7 +434,7 @@ async function initApp() {
     }
 
     // ==================== FACTURE (avec FALCON) ====================
-    async function buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig) {
+    async function buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, mlDsaSig) {
         const cfg = {
             siret: document.getElementById('siretField').value.trim(),
             tva: parseFloat(document.getElementById('tvaField').value) || 0,
@@ -427,18 +471,25 @@ async function initApp() {
             f.falcon_nist_level = falconSig.nistLevel;
             f.falcon_public_key = falconSig.publicKey;
         }
+        if (mlDsaSig) {
+            f.ml_dsa_signature = mlDsaSig.signature;
+            f.ml_dsa_algorithm = `${mlDsaSig.algorithm}-${mlDsaSig.variant}`;
+            f.ml_dsa_standard = mlDsaSig.standard;
+            f.ml_dsa_nist_level = mlDsaSig.nistLevel;
+            f.ml_dsa_public_key = mlDsaSig.publicKey;
+        }
         Object.keys(f).forEach(key => f[key] === undefined && delete f[key]);
         return f;
     }
 
     function buildClientData(f) {
         const c = { ...f };
-        ['categorie_emetteur', 'categorie_destinataire', 'siret', 'adresse_siege', 'objet_prestation', 'mention_tva', 'eip712_signature', 'valeur_ht_fiat', 'falcon_signature', 'falcon_algorithm', 'falcon_standard', 'falcon_nist_level', 'falcon_public_key'].forEach(k => delete c[k]);
+        ['categorie_emetteur', 'categorie_destinataire', 'siret', 'adresse_siege', 'objet_prestation', 'mention_tva', 'eip712_signature', 'valeur_ht_fiat', 'falcon_signature', 'falcon_algorithm', 'falcon_standard', 'falcon_nist_level', 'falcon_public_key', 'ml_dsa_signature', 'ml_dsa_algorithm', 'ml_dsa_standard', 'ml_dsa_nist_level', 'ml_dsa_public_key'].forEach(k => delete c[k]);
         return c;
     }
 
-    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, falconSig = null) {
-        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig);
+    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, falconSig = null, mlDsaSig = null) {
+        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, mlDsaSig);
         const client = buildClientData(full);
         const qrD = { hash: h, from, to, amount: amtStr || `${amt} ${sym}`, date: ts, explorer: getExplorerUrl(h), usd: usdValue };
         const qrURL = await qrDataURL(JSON.stringify(qrD));
@@ -627,6 +678,20 @@ async function initApp() {
                 }
             }
 
+            // === ÉTAPE 2.5: ML-DSA (signature post-quantique) ===
+            let mlDsaSig = null;
+            try {
+                els.txStatus.innerHTML += '<br>💎 Signature ML-DSA...';
+                mlDsaSig = await signTxWithMLDSA(tx.hash);
+                if (mlDsaSig) {
+                    els.txStatus.innerHTML += `<br>✅ ML-DSA signé ! <span style="font-size:0.75rem;">(${mlDsaSig.variant}, ${mlDsaSig.standard})</span>`;
+                } else {
+                    els.txStatus.innerHTML += '<br>⚠️ ML-DSA indisponible';
+                }
+            } catch (e) {
+                els.txStatus.innerHTML += `<br>⚠️ ML-DSA erreur: ${e.message}`;
+            }
+
             // === ÉTAPE 3: EIP-712 (signature classique du reçu) ===
             let eipSig = null;
             try {
@@ -647,7 +712,7 @@ async function initApp() {
                     originalFrom: d.from, originalTo: d.to,
                     invoiceNumber: d.invoiceNumber, timestampUTC: d.timestampUTC,
                     usdcValue: d.usdcValue, catFrom: fromCat, catTo: toCat, amtStr: null,
-                    signature: eipSig, falconSignature: falconSig,
+                    signature: eipSig, falconSignature: falconSig, mlDsaSignature: mlDsaSig,
                 };
                 const receiptBtn = document.getElementById('receiptBtn');
                 receiptBtn.disabled = false; receiptBtn.classList.add('ready');
@@ -784,7 +849,7 @@ async function initApp() {
         if (!data) { alert("Aucune transaction récente."); return; }
         let signature = data.signature;
         if (!signature) { const result = await attemptAutoSign(); if (result) signature = result; if (signature) window._lastTxData.signature = signature; }
-        await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature);
+        await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature, data.mlDsaSignature);
         alert("Facture générée. Utilisez les boutons ci-dessous pour l'imprimer ou la télécharger.");
     });
 
@@ -899,7 +964,9 @@ async function initApp() {
         const entryDiv = document.createElement('div');
         entryDiv.className = 'tx-log-item';
         const date = new Date().toLocaleString();
-        const pqcBadge = tx.falconSignature ? ' <span class="falcon-algo-badge falcon-badge-falcon" style="font-size:0.6rem;">FALCON</span>' : '';
+        const falconBadge = tx.falconSignature ? ' <span class="falcon-algo-badge falcon-badge-falcon" style="font-size:0.6rem;">FALCON</span>' : '';
+        const mlDsaBadge = tx.mlDsaSignature ? ' <span class="falcon-algo-badge falcon-badge-dilithium" style="font-size:0.6rem;">ML-DSA</span>' : '';
+        const pqcBadge = falconBadge + mlDsaBadge;
         entryDiv.innerHTML = `
             <div><b>${tx.type === 'outgoing' ? '📤 Envoi' : '📥 Réception'}</b> ${tx.amount} ${tx.token} (≈${tx.usdcValue} USD)${pqcBadge}</div>
             <small>De: ${tx.from} → À: ${tx.to}<br>${date}<br>Hash: <span class="tx-hash-link" data-hash="${tx.hash}">${tx.hash.slice(0,10)}...</span></small>
