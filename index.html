@@ -654,6 +654,20 @@
 
         <div class="col-right">
             <div id="rightPanel" class="panel-content" style="display:none;"></div>
+            <!-- FALCON PQC CONTROL CENTER -->
+            <div class="card" id="pqcControlCenter" style="margin-bottom:1rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                    <span style="font-size:1.5rem;">🔐</span>
+                    <div>
+                        <h3 style="margin:0;font-size:1rem;">Cryptographie Post-Quantique</h3>
+                        <small style="color:#888;">NIST FIPS 203, 204, 205, 206</small>
+                    </div>
+                </div>
+                <button id="pqcInitBtn" style="width:100%;padding:0.6rem;background:#2c3e4e;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.9rem;margin-bottom:0.5rem;">
+                    ⚡ Initialiser les clés PQC
+                </button>
+                <div id="pqcStatus" style="font-size:0.7rem;color:#888;text-align:center;"></div>
+            </div>
             <div class="card tx-history-compact">
                 <div class="history-header">
                     <h3>📋 Historique</h3>

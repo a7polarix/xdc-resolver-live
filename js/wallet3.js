@@ -213,6 +213,60 @@ async function initApp() {
         });
     }
 
+    // ==================== PQC CONTROL CENTER ====================
+    const pqcInitBtn = document.getElementById('pqcInitBtn');
+    const pqcStatus = document.getElementById('pqcStatus');
+
+    function updatePqcStatus() {
+        const algos = ['ml-dsa', 'slh-dsa', 'ml-kem'];
+        const ready = algos.filter(a => localStorage.getItem(`pqc_keys_${a}`)).length;
+        if (ready === algos.length) {
+            pqcStatus.innerHTML = '✅ Toutes les clés PQC sont prêtes (ML-DSA, SLH-DSA, ML-KEM)';
+            pqcInitBtn.textContent = '🔄 Régénérer les clés';
+            pqcInitBtn.style.background = '#38a169';
+        } else {
+            pqcStatus.innerHTML = `⚠️ ${ready}/${algos.length} clés prêtes — cliquez pour initialiser`;
+            pqcInitBtn.textContent = '⚡ Initialiser les clés PQC';
+            pqcInitBtn.style.background = '#2c3e4e';
+        }
+    }
+
+    updatePqcStatus();
+
+    pqcInitBtn?.addEventListener('click', async () => {
+        pqcInitBtn.disabled = true;
+        pqcInitBtn.textContent = '⏳ Génération en cours...';
+        const algos = [
+            { algorithm: 'ml-dsa', variant: 'ml_dsa65', name: 'ML-DSA-65' },
+            { algorithm: 'slh-dsa', variant: 'slh_dsa_sha2_128s', name: 'SLH-DSA-128s' },
+            { algorithm: 'ml-kem', variant: 'ml_kem512', name: 'ML-KEM-512' }
+        ];
+        for (const algo of algos) {
+            try {
+                const r = await fetch('/api/pqc.js', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'keys', algorithm: algo.algorithm, variant: algo.variant })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    localStorage.setItem(`pqc_keys_${algo.algorithm}`, JSON.stringify({
+                        publicKey: d.publicKey,
+                        secretKey: d.secretKey,
+                        publicKeyBytes: d.publicKeyBytes,
+                        generatedAt: new Date().toISOString()
+                    }));
+                    pqcStatus.textContent = `✅ ${algo.name} généré...`;
+                } else {
+                    pqcStatus.textContent = `❌ ${algo.name}: ${d.error}`;
+                }
+            } catch (e) {
+                pqcStatus.textContent = `❌ ${algo.name}: erreur réseau`;
+            }
+        }
+        updatePqcStatus();
+        pqcInitBtn.disabled = false;
+    });
+
     // ==================== ORACLE ====================
     let oracleRawAnswer = null, oracleDecimals = 8, oraclePrice = null;
     const oraclePriceDisplay = document.getElementById('oraclePriceDisplay');
@@ -390,6 +444,46 @@ async function initApp() {
         } catch (e) { console.warn('ML-DSA sign failed:', e); return null; }
     }
 
+    // ==================== SLH-DSA: SIGNER LE HASH DE TRANSACTION ====================
+    async function signTxWithSLHDSA(txHash) {
+        try {
+            let stored = localStorage.getItem('pqc_keys_slh-dsa');
+            if (!stored) {
+                const genR = await fetch('/api/pqc.js', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'keys', algorithm: 'slh-dsa', variant: 'slh_dsa_sha2_128s' })
+                });
+                const genD = await genR.json();
+                if (!genD.success) { console.warn('SLH-DSA key gen failed:', genD.error); return null; }
+                localStorage.setItem('pqc_keys_slh-dsa', JSON.stringify({
+                    publicKey: genD.publicKey,
+                    secretKey: genD.secretKey,
+                    publicKeyBytes: genD.publicKeyBytes,
+                    generatedAt: new Date().toISOString()
+                }));
+                stored = localStorage.getItem('pqc_keys_slh-dsa');
+            }
+            const keys = JSON.parse(stored);
+            const resp = await fetch('/api/pqc.js', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'sign', message: txHash, algorithm: 'slh-dsa', variant: 'slh_dsa_sha2_128s', secretKey: keys.secretKey })
+            });
+            const data = await resp.json();
+            if (data.success && data.signature) {
+                return {
+                    signature: data.signature,
+                    algorithm: 'slh-dsa',
+                    variant: 'slh_dsa_sha2_128s',
+                    standard: data.standard,
+                    nistLevel: data.nistLevel,
+                    publicKey: keys.publicKey,
+                };
+            }
+            console.warn('SLH-DSA sign failed:', data.error);
+            return null;
+        } catch (e) { console.warn('SLH-DSA sign failed:', e); return null; }
+    }
+
     // ==================== FALCON: VÉRIFIER UNE SIGNATURE ====================
     async function verifyFalconSignature(txHash, falconSigData) {
         if (!falconSigData || !falconSigData.signature || !falconSigData.publicKey) return null;
@@ -434,7 +528,7 @@ async function initApp() {
     }
 
     // ==================== FACTURE (avec FALCON) ====================
-    async function buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, mlDsaSig) {
+    async function buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, mlDsaSig, slhDsaSig) {
         const cfg = {
             siret: document.getElementById('siretField').value.trim(),
             tva: parseFloat(document.getElementById('tvaField').value) || 0,
@@ -478,18 +572,25 @@ async function initApp() {
             f.ml_dsa_nist_level = mlDsaSig.nistLevel;
             f.ml_dsa_public_key = mlDsaSig.publicKey;
         }
+        if (slhDsaSig) {
+            f.slh_dsa_signature = slhDsaSig.signature;
+            f.slh_dsa_algorithm = `${slhDsaSig.algorithm}-${slhDsaSig.variant}`;
+            f.slh_dsa_standard = slhDsaSig.standard;
+            f.slh_dsa_nist_level = slhDsaSig.nistLevel;
+            f.slh_dsa_public_key = slhDsaSig.publicKey;
+        }
         Object.keys(f).forEach(key => f[key] === undefined && delete f[key]);
         return f;
     }
 
     function buildClientData(f) {
         const c = { ...f };
-        ['categorie_emetteur', 'categorie_destinataire', 'siret', 'adresse_siege', 'objet_prestation', 'mention_tva', 'eip712_signature', 'valeur_ht_fiat', 'falcon_signature', 'falcon_algorithm', 'falcon_standard', 'falcon_nist_level', 'falcon_public_key', 'ml_dsa_signature', 'ml_dsa_algorithm', 'ml_dsa_standard', 'ml_dsa_nist_level', 'ml_dsa_public_key'].forEach(k => delete c[k]);
+        ['categorie_emetteur', 'categorie_destinataire', 'siret', 'adresse_siege', 'objet_prestation', 'mention_tva', 'eip712_signature', 'valeur_ht_fiat', 'falcon_signature', 'falcon_algorithm', 'falcon_standard', 'falcon_nist_level', 'falcon_public_key', 'ml_dsa_signature', 'ml_dsa_algorithm', 'ml_dsa_standard', 'ml_dsa_nist_level', 'ml_dsa_public_key', 'slh_dsa_signature', 'slh_dsa_algorithm', 'slh_dsa_standard', 'slh_dsa_nist_level', 'slh_dsa_public_key'].forEach(k => delete c[k]);
         return c;
     }
 
-    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, falconSig = null, mlDsaSig = null) {
-        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, mlDsaSig);
+    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, falconSig = null, mlDsaSig = null, slhDsaSig = null) {
+        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, mlDsaSig, slhDsaSig);
         const client = buildClientData(full);
         const qrD = { hash: h, from, to, amount: amtStr || `${amt} ${sym}`, date: ts, explorer: getExplorerUrl(h), usd: usdValue };
         const qrURL = await qrDataURL(JSON.stringify(qrD));
@@ -692,6 +793,20 @@ async function initApp() {
                 els.txStatus.innerHTML += `<br>⚠️ ML-DSA erreur: ${e.message}`;
             }
 
+            // === ÉTAPE 2.6: SLH-DSA (signature post-quantique hash-based) ===
+            let slhDsaSig = null;
+            try {
+                els.txStatus.innerHTML += '<br>🌲 Signature SLH-DSA...';
+                slhDsaSig = await signTxWithSLHDSA(tx.hash);
+                if (slhDsaSig) {
+                    els.txStatus.innerHTML += `<br>✅ SLH-DSA signé ! <span style="font-size:0.75rem;">(${slhDsaSig.variant}, ${slhDsaSig.standard})</span>`;
+                } else {
+                    els.txStatus.innerHTML += '<br>⚠️ SLH-DSA indisponible';
+                }
+            } catch (e) {
+                els.txStatus.innerHTML += `<br>⚠️ SLH-DSA erreur: ${e.message}`;
+            }
+
             // === ÉTAPE 3: EIP-712 (signature classique du reçu) ===
             let eipSig = null;
             try {
@@ -712,7 +827,7 @@ async function initApp() {
                     originalFrom: d.from, originalTo: d.to,
                     invoiceNumber: d.invoiceNumber, timestampUTC: d.timestampUTC,
                     usdcValue: d.usdcValue, catFrom: fromCat, catTo: toCat, amtStr: null,
-                    signature: eipSig, falconSignature: falconSig, mlDsaSignature: mlDsaSig,
+                    signature: eipSig, falconSignature: falconSig, mlDsaSignature: mlDsaSig, slhDsaSignature: slhDsaSig,
                 };
                 const receiptBtn = document.getElementById('receiptBtn');
                 receiptBtn.disabled = false; receiptBtn.classList.add('ready');
@@ -849,7 +964,7 @@ async function initApp() {
         if (!data) { alert("Aucune transaction récente."); return; }
         let signature = data.signature;
         if (!signature) { const result = await attemptAutoSign(); if (result) signature = result; if (signature) window._lastTxData.signature = signature; }
-        await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature, data.mlDsaSignature);
+        await displayInvoice(data.hash, data.amount, data.from, data.to, data.symbol, data.invoiceNumber, data.timestampUTC, data.catFrom, data.catTo, data.amtStr, data.usdcValue, signature, data.falconSignature, data.mlDsaSignature, data.slhDsaSignature);
         alert("Facture générée. Utilisez les boutons ci-dessous pour l'imprimer ou la télécharger.");
     });
 
@@ -966,7 +1081,8 @@ async function initApp() {
         const date = new Date().toLocaleString();
         const falconBadge = tx.falconSignature ? ' <span class="falcon-algo-badge falcon-badge-falcon" style="font-size:0.6rem;">FALCON</span>' : '';
         const mlDsaBadge = tx.mlDsaSignature ? ' <span class="falcon-algo-badge falcon-badge-dilithium" style="font-size:0.6rem;">ML-DSA</span>' : '';
-        const pqcBadge = falconBadge + mlDsaBadge;
+        const slhDsaBadge = tx.slhDsaSignature ? ' <span class="falcon-algo-badge falcon-badge-sphincs" style="font-size:0.6rem;">SLH-DSA</span>' : '';
+        const pqcBadge = falconBadge + mlDsaBadge + slhDsaBadge;
         entryDiv.innerHTML = `
             <div><b>${tx.type === 'outgoing' ? '📤 Envoi' : '📥 Réception'}</b> ${tx.amount} ${tx.token} (≈${tx.usdcValue} USD)${pqcBadge}</div>
             <small>De: ${tx.from} → À: ${tx.to}<br>${date}<br>Hash: <span class="tx-hash-link" data-hash="${tx.hash}">${tx.hash.slice(0,10)}...</span></small>
