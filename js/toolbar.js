@@ -239,6 +239,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ---- FALCON POST-QUANTUM PANEL ----
+    function openFalconPanel() {
+        showPanel(`<div class="falcon-panel">
+            <h3>🔐 Cryptographie Post-Quantique</h3>
+            <p>Signatures résistantes aux attaques quantiques — Standards NIST PQC</p>
+            <h4>Algorithmes disponibles</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;">
+                <button id="pqcAlgoFalcon" style="padding:0.5rem;background:#38a169;color:white;border:none;border-radius:8px;cursor:pointer;">🐦 FALCON-512</button>
+                <button id="pqcAlgoDilithium" style="padding:0.5rem;background:#2c3e4e;color:white;border:none;border-radius:8px;cursor:pointer;">💎 ML-DSA-65</button>
+                <button id="pqcAlgoKyber" style="padding:0.5rem;background:#2c3e4e;color:white;border:none;border-radius:8px;cursor:pointer;">🔑 ML-KEM-512</button>
+                <button id="pqcAlgoSphincs" style="padding:0.5rem;background:#2c3e4e;color:white;border:none;border-radius:8px;cursor:pointer;">🌲 SLH-DSA-128s</button>
+            </div>
+            <h4>Signer un message</h4>
+            <input type="text" id="pqcMessage" placeholder="Message à signer..." style="width:100%;padding:0.4rem;border-radius:8px;border:1px solid #cfdde6;margin-bottom:0.5rem;">
+            <button id="pqcSignBtn" class="primary" style="width:100%;">✍️ Signer</button>
+            <div id="pqcSigOutput" style="font-size:0.7rem;word-break:break-all;background:rgba(0,0,0,0.1);padding:0.5rem;border-radius:8px;max-height:100px;overflow-y:auto;margin-top:0.5rem;"></div>
+            <hr><small>NIST FIPS 206, 204, 203, 205</small>
+        </div>`);
+
+        let currentAlgo = 'falcon';
+        const algoMap = { pqcAlgoFalcon: 'falcon', pqcAlgoDilithium: 'ml-dsa', pqcAlgoKyber: 'ml-kem', pqcAlgoSphincs: 'slh-dsa' };
+        Object.entries(algoMap).forEach(([id, algo]) => {
+            document.getElementById(id)?.addEventListener('click', () => {
+                currentAlgo = algo;
+                Object.keys(algoMap).forEach(k => { const b = document.getElementById(k); if(b) b.style.background = '#2c3e4e'; });
+                document.getElementById(id).style.background = '#38a169';
+            });
+        });
+
+        document.getElementById('pqcSignBtn')?.addEventListener('click', async () => {
+            const msg = document.getElementById('pqcMessage').value;
+            if (!msg) { alert('Entrez un message.'); return; }
+            document.getElementById('pqcSigOutput').textContent = '⏳ Signature...';
+            try {
+                const r = await fetch('/api/pqc.js', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'sign', message: msg, algorithm: currentAlgo })
+                });
+                const d = await r.json();
+                document.getElementById('pqcSigOutput').innerHTML = d.success
+                    ? `✅ ${d.algorithm}:<br>${d.signature.slice(0,80)}...`
+                    : `❌ ${d.error}`;
+            } catch (e) { document.getElementById('pqcSigOutput').textContent = '❌ Erreur réseau.'; }
+        });
+    }
+
     // ===== GESTIONNAIRE DE CLICS PRINCIPAL =====
     toolbarBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -261,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'files': openFilesPanel(); break;
                 case 'ai': openAiPanel(); break;
                 case 'radio': openRadioPanel(); break;
+                case 'falcon': openFalconPanel(); break;
                 default: break;
             }
         });
