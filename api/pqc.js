@@ -23,6 +23,7 @@ import {
     MASTER_PK,
     MASTER_SK,
 } from './falcon.js';
+import { signWithDomainKeys, verifyDomainSignature, getDomainKeys } from './pqc-domain.js';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -181,10 +182,31 @@ export default async function handler(req, res) {
 
             // ---- DEFAULT ----
             default:
+                // Domain-based PQC (XWD contract data as deterministic key source)
+                if (action === 'domain-sign' || action === 'domain-verify' || action === 'domain-info') {
+                    const domain = params.domain;
+                    if (!domain) return res.status(400).json({ error: 'domain required' });
+                    if (action === 'domain-sign') {
+                        const { txHash, algorithms } = params;
+                        if (!txHash) return res.status(400).json({ error: 'txHash required' });
+                        const result = await signWithDomainKeys(domain, txHash, algorithms || ['falcon']);
+                        if (result.error) return res.status(400).json({ error: result.error });
+                        return res.status(200).json({ success: true, domain: result.domain, owner: result.owner, tokenId: result.tokenId, signatures: result.signatures });
+                    }
+                    if (action === 'domain-verify') {
+                        const { message, algorithm, signature, publicKey } = params;
+                        const result = await verifyDomainSignature(domain, message, algorithm, signature, publicKey);
+                        return res.status(200).json(result);
+                    }
+                    if (action === 'domain-info') {
+                        const result = await getDomainKeys(domain, ['falcon', 'ml-dsa', 'slh-dsa', 'ml-kem']);
+                        if (result.error) return res.status(400).json({ error: result.error });
+                        return res.status(200).json({ success: true, domain: result.domain, owner: result.owner, tokenId: result.tokenId, publicKeys: result.keys });
+                    }
+                }
                 return res.status(400).json({
                     error: `Unknown action: ${action}`,
-                    supported: ['info', 'keys', 'sign', 'verify', 'hybrid', 'quantum'],
-                    usage: 'POST /api/pqc.js with JSON body { action: "...", ...params }',
+                    supported: ['info', 'keys', 'sign', 'verify', 'hybrid', 'quantum', 'domain-sign', 'domain-verify', 'domain-info'],
                 });
         }
     } catch (err) {

@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (algos.length === 0) return {};
 
         try {
-            const r = await fetch('/api/pqc-receipt.js?action=sign', {
+            const r = await fetch('/api/pqc.js?action=domain-sign', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ domain: fromDomain, txHash: txHash, algorithms: algos })
