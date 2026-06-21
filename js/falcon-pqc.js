@@ -7,6 +7,8 @@
 
 import { falcon512, falcon1024 } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.6.1/falcon.js/+esm';
 import { ml_dsa65 } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.6.1/ml-dsa.js/+esm';
+import { ml_kem512, ml_kem768, ml_kem1024 } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.6.1/ml-kem.js/+esm';
+import { slh_dsa_sha2_128s, slh_dsa_sha2_128f } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.6.1/slh-dsa.js/+esm';
 import { randomBytes } from 'https://cdn.jsdelivr.net/npm/@noble/post-quantum@0.6.1/utils.js/+esm';
 
 function toBytes(input) {
@@ -142,6 +144,95 @@ async function verifyMessage(message, signatureHex, publicKeyHex, algorithm, var
     };
 }
 
+// ---- ML-KEM (Kyber) KEY ENCAPSULATION ----
+async function generateKEMKeys(variant) {
+    if (!variant) variant = 'ml_kem512';
+    const seed = randomBytes(32);
+    const noble = variant === 'ml_kem768' ? ml_kem768 : variant === 'ml_kem1024' ? ml_kem1024 : ml_kem512;
+    const keys = noble.keygen(seed);
+    const params = { ml_kem512: { pk: 800, sk: 1632, ct: 768 }, ml_kem768: { pk: 1184, sk: 2400, ct: 1088 }, ml_kem1024: { pk: 1568, sk: 3168, ct: 1568 } }[variant] || { pk: 800, sk: 1632, ct: 768 };
+    return {
+        algorithm: 'ml-kem', variant,
+        publicKey: bytesToHex(keys.publicKey),
+        secretKey: bytesToHex(keys.secretKey),
+        publicKeyBytes: params.pk, secretKeyBytes: params.sk, ciphertextBytes: params.ct,
+        standard: 'NIST FIPS 203 (ML-KEM / Kyber)',
+        quantumResistant: true, latticeBased: true,
+    };
+}
+
+async function encapsulateKEM(publicKeyHex, variant) {
+    if (!variant) variant = 'ml_kem512';
+    const noble = variant === 'ml_kem768' ? ml_kem768 : variant === 'ml_kem1024' ? ml_kem1024 : ml_kem512;
+    const pkBytes = toBytes(publicKeyHex);
+    const result = noble.encapsulate(pkBytes);
+    return {
+        ciphertext: bytesToHex(result.ciphertext),
+        sharedSecret: bytesToHex(result.sharedSecret),
+        ciphertextBytes: result.ciphertext.length,
+        algorithm: 'ml-kem', variant,
+        standard: 'NIST FIPS 203',
+        quantumResistant: true,
+    };
+}
+
+async function decapsulateKEM(ciphertextHex, secretKeyHex, variant) {
+    if (!variant) variant = 'ml_kem512';
+    const noble = variant === 'ml_kem768' ? ml_kem768 : variant === 'ml_kem1024' ? ml_kem1024 : ml_kem512;
+    const ctBytes = toBytes(ciphertextHex);
+    const skBytes = toBytes(secretKeyHex);
+    const sharedSecret = noble.decapsulate(ctBytes, skBytes);
+    return {
+        sharedSecret: bytesToHex(sharedSecret),
+        algorithm: 'ml-kem', variant,
+        standard: 'NIST FIPS 203',
+        quantumResistant: true,
+    };
+}
+
+// ---- SLH-DSA (SPHINCS+) HASH-BASED SIGNATURES ----
+async function generateSPHINCSKeys(variant) {
+    if (!variant) variant = 'slh_dsa_sha2_128s';
+    const seed = randomBytes(32);
+    const noble = variant === 'slh_dsa_sha2_128f' ? slh_dsa_sha2_128f : slh_dsa_sha2_128s;
+    const keys = noble.keygen(seed);
+    const params = { slh_dsa_sha2_128s: { pk: 32, sk: 64, sig: 7856 }, slh_dsa_sha2_128f: { pk: 32, sk: 64, sig: 17088 } }[variant] || { pk: 32, sk: 64, sig: 7856 };
+    return {
+        algorithm: 'slh-dsa', variant,
+        publicKey: bytesToHex(keys.publicKey),
+        secretKey: bytesToHex(keys.secretKey),
+        publicKeyBytes: params.pk, secretKeyBytes: params.sk, signatureBytes: params.sig,
+        standard: 'NIST FIPS 205 (SLH-DSA / SPHINCS+)',
+        quantumResistant: true, hashBased: true,
+    };
+}
+
+async function signMessageSPHINCS(message, secretKeyHex, variant) {
+    if (!variant) variant = 'slh_dsa_sha2_128s';
+    const noble = variant === 'slh_dsa_sha2_128f' ? slh_dsa_sha2_128f : slh_dsa_sha2_128s;
+    const msgBytes = toBytes(message);
+    const skBytes = toBytes(secretKeyHex);
+    const sigBytes = noble.sign(msgBytes, skBytes);
+    return {
+        signature: bytesToHex(sigBytes),
+        signatureBytes: sigBytes.length,
+        algorithm: 'slh-dsa', variant,
+        standard: 'NIST FIPS 205',
+        quantumResistant: true, hashBased: true,
+    };
+}
+
+async function verifyMessageSPHINCS(message, signatureHex, publicKeyHex, variant) {
+    if (!variant) variant = 'slh_dsa_sha2_128s';
+    const noble = variant === 'slh_dsa_sha2_128f' ? slh_dsa_sha2_128f : slh_dsa_sha2_128s;
+    const msgBytes = toBytes(message);
+    const sigBytes = toBytes(signatureHex);
+    const pkBytes = toBytes(publicKeyHex);
+    let valid = false;
+    try { valid = noble.verify(sigBytes, msgBytes, pkBytes); } catch { valid = false; }
+    return { valid, algorithm: 'slh-dsa', variant, standard: 'NIST FIPS 205', quantumResistant: true, hashBased: true };
+}
+
 // ---- SAVE / LOAD ----
 function saveKeys(d) {
     if (!d.algorithm) d.algorithm = 'falcon';
@@ -163,8 +254,14 @@ window.falconPQC = {
     verifyMessage,
     saveKeys,
     loadKeys,
+    generateKEMKeys,
+    encapsulateKEM,
+    decapsulateKEM,
+    generateSPHINCSKeys,
+    signMessageSPHINCS,
+    verifyMessageSPHINCS,
     FALCON_PARAMS,
     randomBytes: (n) => bytesToHex(randomBytes(n)),
 };
 
-console.log('[falconPQC] @noble/post-quantum loaded — FALCON-512/1024 + ML-DSA-65 ready');
+console.log('[falconPQC] @noble/post-quantum loaded — FALCON-512/1024 + ML-DSA-65 + ML-KEM + SLH-DSA ready');

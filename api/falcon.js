@@ -15,6 +15,8 @@
 
 import { falcon512, falcon1024 } from '@noble/post-quantum/falcon.js';
 import { ml_dsa44, ml_dsa65, ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
+import { ml_kem512, ml_kem768, ml_kem1024 } from '@noble/post-quantum/ml-kem.js';
+import { slh_dsa_sha2_128s, slh_dsa_sha2_128f, slh_dsa_sha2_192s, slh_dsa_sha2_192f, slh_dsa_sha2_256s, slh_dsa_sha2_256f } from '@noble/post-quantum/slh-dsa.js';
 import { randomBytes } from '@noble/post-quantum/utils.js';
 
 // ============================================================
@@ -43,6 +45,21 @@ const ML_DSA_PARAMS = {
   ml_dsa44: { signatureBytes: 2420, publicKeyBytes: 1312, secretKeyBytes: 2560, nistLevel: 2, k: 4, l: 4, eta: 2 },
   ml_dsa65: { signatureBytes: 3309, publicKeyBytes: 1952, secretKeyBytes: 4032, nistLevel: 3, k: 6, l: 5, eta: 4 },
   ml_dsa87: { signatureBytes: 4627, publicKeyBytes: 2592, secretKeyBytes: 4896, nistLevel: 5, k: 8, l: 7, eta: 2 },
+};
+
+const ML_KEM_PARAMS = {
+  ml_kem512:  { ciphertextBytes: 768,  publicKeyBytes: 800,  secretKeyBytes: 1632, nistLevel: 1, standard: 'NIST FIPS 203 (ML-KEM / Kyber)' },
+  ml_kem768:  { ciphertextBytes: 1088, publicKeyBytes: 1184, secretKeyBytes: 2400, nistLevel: 3, standard: 'NIST FIPS 203 (ML-KEM / Kyber)' },
+  ml_kem1024: { ciphertextBytes: 1568, publicKeyBytes: 1568, secretKeyBytes: 3168, nistLevel: 5, standard: 'NIST FIPS 203 (ML-KEM / Kyber)' },
+};
+
+const SLH_DSA_PARAMS = {
+  slh_dsa_sha2_128s: { signatureBytes: 7856,  publicKeyBytes: 32,  secretKeyBytes: 64,  nistLevel: 1, standard: 'NIST FIPS 205 (SLH-DSA / SPHINCS+)' },
+  slh_dsa_sha2_128f: { signatureBytes: 17088, publicKeyBytes: 32,  secretKeyBytes: 64,  nistLevel: 1, standard: 'NIST FIPS 205 (SLH-DSA / SPHINCS+)' },
+  slh_dsa_sha2_192s: { signatureBytes: 16224, publicKeyBytes: 48,  secretKeyBytes: 96,  nistLevel: 3, standard: 'NIST FIPS 205 (SLH-DSA / SPHINCS+)' },
+  slh_dsa_sha2_192f: { signatureBytes: 35664, publicKeyBytes: 48,  secretKeyBytes: 96,  nistLevel: 3, standard: 'NIST FIPS 205 (SLH-DSA / SPHINCS+)' },
+  slh_dsa_sha2_256s: { signatureBytes: 29792, publicKeyBytes: 64,  secretKeyBytes: 128, nistLevel: 5, standard: 'NIST FIPS 205 (SLH-DSA / SPHINCS+)' },
+  slh_dsa_sha2_256f: { signatureBytes: 49856, publicKeyBytes: 64,  secretKeyBytes: 128, nistLevel: 5, standard: 'NIST FIPS 205 (SLH-DSA / SPHINCS+)' },
 };
 
 // ============================================================
@@ -313,6 +330,162 @@ export async function verifySignatureDilithium(message, signatureHex, publicKeyH
 }
 
 // ============================================================
+// ML-KEM (Kyber) KEY ENCAPSULATION
+// ============================================================
+
+const ML_KEM_VARIANT_MAP = {
+  ml_kem512:  ml_kem512,
+  ml_kem768:  ml_kem768,
+  ml_kem1024: ml_kem1024,
+};
+
+export async function generateKEMKeys(variant = 'ml_kem512') {
+  if (!ML_KEM_PARAMS[variant]) throw new Error(`Unknown ML-KEM variant: ${variant}`);
+  const params = ML_KEM_PARAMS[variant];
+  const noble = ML_KEM_VARIANT_MAP[variant];
+  const seed = randomBytes(32);
+  const keys = noble.keygen(seed);
+  return {
+    variant,
+    algorithm: 'ML-KEM',
+    standard: params.standard,
+    nistLevel: params.nistLevel,
+    publicKey: bytesToHex(keys.publicKey),
+    secretKey: bytesToHex(keys.secretKey),
+    publicKeyBytes: keys.publicKey.length,
+    secretKeyBytes: keys.secretKey.length,
+    ciphertextBytes: params.ciphertextBytes,
+    quantumResistant: true,
+    latticeBased: true,
+    hardProblem: 'Module-LWE',
+  };
+}
+
+export async function encapsulateKEM(publicKeyHex, variant = 'ml_kem512') {
+  if (!ML_KEM_PARAMS[variant]) throw new Error(`Unknown ML-KEM variant: ${variant}`);
+  const noble = ML_KEM_VARIANT_MAP[variant];
+  const pkBytes = toBytes(publicKeyHex);
+  const result = noble.encapsulate(pkBytes);
+  return {
+    ciphertext: bytesToHex(result.ciphertext),
+    sharedSecret: bytesToHex(result.sharedSecret),
+    ciphertextBytes: result.ciphertext.length,
+    variant,
+    algorithm: 'ML-KEM',
+    standard: ML_KEM_PARAMS[variant].standard,
+    nistLevel: ML_KEM_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+  };
+}
+
+export async function decapsulateKEM(ciphertextHex, secretKeyHex, variant = 'ml_kem512') {
+  if (!ML_KEM_PARAMS[variant]) throw new Error(`Unknown ML-KEM variant: ${variant}`);
+  const noble = ML_KEM_VARIANT_MAP[variant];
+  const ctBytes = toBytes(ciphertextHex);
+  const skBytes = toBytes(secretKeyHex);
+  const sharedSecret = noble.decapsulate(ctBytes, skBytes);
+  return {
+    sharedSecret: bytesToHex(sharedSecret),
+    variant,
+    algorithm: 'ML-KEM',
+    standard: ML_KEM_PARAMS[variant].standard,
+    nistLevel: ML_KEM_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+  };
+}
+
+// ============================================================
+// SLH-DSA (SPHINCS+) HASH-BASED SIGNATURES
+// ============================================================
+
+const SLH_DSA_VARIANT_MAP = {
+  slh_dsa_sha2_128s: slh_dsa_sha2_128s,
+  slh_dsa_sha2_128f: slh_dsa_sha2_128f,
+  slh_dsa_sha2_192s: slh_dsa_sha2_192s,
+  slh_dsa_sha2_192f: slh_dsa_sha2_192f,
+  slh_dsa_sha2_256s: slh_dsa_sha2_256s,
+  slh_dsa_sha2_256f: slh_dsa_sha2_256f,
+};
+
+export async function generateSPHINCSKeys(variant = 'slh_dsa_sha2_128s') {
+  if (!SLH_DSA_PARAMS[variant]) throw new Error(`Unknown SLH-DSA variant: ${variant}`);
+  const params = SLH_DSA_PARAMS[variant];
+  const noble = SLH_DSA_VARIANT_MAP[variant];
+  const seed = randomBytes(32);
+  const keys = noble.keygen(seed);
+  return {
+    variant,
+    algorithm: 'SLH-DSA',
+    standard: params.standard,
+    nistLevel: params.nistLevel,
+    publicKey: bytesToHex(keys.publicKey),
+    secretKey: bytesToHex(keys.secretKey),
+    publicKeyBytes: keys.publicKey.length,
+    secretKeyBytes: keys.secretKey.length,
+    signatureBytes: params.signatureBytes,
+    quantumResistant: true,
+    hashBased: true,
+    hardProblem: 'Hash function security',
+  };
+}
+
+export async function signMessageSPHINCS(message, secretKeyHex, variant = 'slh_dsa_sha2_128s') {
+  if (!SLH_DSA_PARAMS[variant]) throw new Error(`Unknown SLH-DSA variant: ${variant}`);
+  if (!message && message !== '') throw new Error('Message required');
+  if (!secretKeyHex) throw new Error('Secret key required');
+
+  const noble = SLH_DSA_VARIANT_MAP[variant];
+  const msgBytes = toBytes(message);
+  const skBytes = toBytes(secretKeyHex);
+  const sigBytes = noble.sign(msgBytes, skBytes);
+
+  return {
+    signature: bytesToHex(sigBytes),
+    signatureBytes: sigBytes.length,
+    message: typeof message === 'string' ? message : bytesToHex(msgBytes),
+    variant,
+    algorithm: 'SLH-DSA',
+    standard: SLH_DSA_PARAMS[variant].standard,
+    nistLevel: SLH_DSA_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+    hashBased: true,
+  };
+}
+
+export async function verifySignatureSPHINCS(message, signatureHex, publicKeyHex, variant = 'slh_dsa_sha2_128s') {
+  if (!SLH_DSA_PARAMS[variant]) throw new Error(`Unknown SLH-DSA variant: ${variant}`);
+  if (!message && message !== '') throw new Error('Message required');
+  if (!signatureHex) throw new Error('Signature required');
+  if (!publicKeyHex) throw new Error('Public key required');
+
+  const noble = SLH_DSA_VARIANT_MAP[variant];
+  const msgBytes = toBytes(message);
+  const sigBytes = toBytes(signatureHex);
+  const pkBytes = toBytes(publicKeyHex);
+
+  let valid = false;
+  try {
+    valid = noble.verify(sigBytes, msgBytes, pkBytes);
+  } catch {
+    valid = false;
+  }
+
+  return {
+    valid,
+    signatureLength: sigBytes.length,
+    expectedLength: SLH_DSA_PARAMS[variant].signatureBytes,
+    message: typeof message === 'string' ? message : bytesToHex(msgBytes),
+    variant,
+    algorithm: 'SLH-DSA',
+    standard: SLH_DSA_PARAMS[variant].standard,
+    nistLevel: SLH_DSA_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+    hashBased: true,
+    verifiedAt: new Date().toISOString(),
+  };
+}
+
+// ============================================================
 // UNIFIED PQC INTERFACE
 // ============================================================
 
@@ -321,7 +494,11 @@ export async function generatePQCKeys(algorithm = 'falcon', variant) {
     case 'falcon':   return generateFalconKeys(variant || 'falcon512');
     case 'ml-dsa':
     case 'dilithium': return generateDilithiumKeys(variant || 'ml_dsa65');
-    default: throw new Error(`Unknown PQC algorithm: ${algorithm}. Supported: falcon, ml-dsa`);
+    case 'ml-kem':
+    case 'kyber':    return generateKEMKeys(variant || 'ml_kem512');
+    case 'slh-dsa':
+    case 'sphincs':  return generateSPHINCSKeys(variant || 'slh_dsa_sha2_128s');
+    default: throw new Error(`Unknown PQC algorithm: ${algorithm}. Supported: falcon, ml-dsa, ml-kem, slh-dsa`);
   }
 }
 
@@ -330,6 +507,8 @@ export async function signPQC(message, secretKey, algorithm = 'falcon', variant)
     case 'falcon':   return signMessage(message, secretKey, variant || 'falcon512');
     case 'ml-dsa':
     case 'dilithium': return signMessageDilithium(message, secretKey, variant || 'ml_dsa65');
+    case 'slh-dsa':
+    case 'sphincs':  return signMessageSPHINCS(message, secretKey, variant || 'slh_dsa_sha2_128s');
     default: throw new Error(`Unknown PQC algorithm: ${algorithm}`);
   }
 }
@@ -339,6 +518,8 @@ export async function verifyPQC(message, signature, publicKey, algorithm = 'falc
     case 'falcon':   return verifySignature(message, signature, publicKey, variant || 'falcon512');
     case 'ml-dsa':
     case 'dilithium': return verifySignatureDilithium(message, signature, publicKey, variant || 'ml_dsa65');
+    case 'slh-dsa':
+    case 'sphincs':  return verifySignatureSPHINCS(message, signature, publicKey, variant || 'slh_dsa_sha2_128s');
     default: throw new Error(`Unknown PQC algorithm: ${algorithm}`);
   }
 }
@@ -376,6 +557,15 @@ export function getFalconInfo() {
       FALCON_512:      { signatureBytes: 666, publicKeyBytes: 897, quantumResistant: true },
       FALCON_1024:     { signatureBytes: 1280, publicKeyBytes: 1793, quantumResistant: true },
       ML_DSA_65:       { signatureBytes: 3309, publicKeyBytes: 1952, quantumResistant: true },
+      ML_KEM_512:      { ciphertextBytes: 768, publicKeyBytes: 800, quantumResistant: true },
+      SLH_DSA_128s:    { signatureBytes: 7856, publicKeyBytes: 32, quantumResistant: true },
+    },
+    algorithms: ['FALCON', 'ML-DSA', 'ML-KEM', 'SLH-DSA'],
+    nistStandards: {
+      'FIPS 206': 'FN-DSA (Falcon) — lattice signatures',
+      'FIPS 204': 'ML-DSA (Dilithium) — lattice signatures',
+      'FIPS 203': 'ML-KEM (Kyber) — lattice key encapsulation',
+      'FIPS 205': 'SLH-DSA (SPHINCS+) — hash-based signatures',
     },
     hardProblem: 'NTRU Short Integer Solution (SIS)',
     latticeBased: true,

@@ -156,8 +156,20 @@ export default async function handler(req, res) {
                     if (!message || !signature || !publicKey) return res.status(400).json({ error: 'message, signature, publicKey required' });
                     const result = await verifyPQC(message, signature, publicKey, algorithm, variant);
                     return res.status(200).json({ success: true, ...result });
+                } else if (operation === 'encapsulate') {
+                    const { publicKey } = rest;
+                    if (!publicKey) return res.status(400).json({ error: 'publicKey required' });
+                    if (!algorithm || !algorithm.match(/ml-kem|kyber/)) return res.status(400).json({ error: 'encapsulate requires ml-kem/kyber algorithm' });
+                    const result = await encapsulateKEM(publicKey, variant || 'ml_kem512');
+                    return res.status(200).json({ success: true, ...result });
+                } else if (operation === 'decapsulate') {
+                    const { ciphertext, secretKey } = rest;
+                    if (!ciphertext || !secretKey) return res.status(400).json({ error: 'ciphertext and secretKey required' });
+                    if (!algorithm || !algorithm.match(/ml-kem|kyber/)) return res.status(400).json({ error: 'decapsulate requires ml-kem/kyber algorithm' });
+                    const result = await decapsulateKEM(ciphertext, secretKey, variant || 'ml_kem512');
+                    return res.status(200).json({ success: true, ...result });
                 } else {
-                    return res.status(400).json({ error: `Invalid operation: ${operation}. Use: keys, sign, verify` });
+                    return res.status(400).json({ error: `Invalid operation: ${operation}. Use: keys, sign, verify, encapsulate, decapsulate` });
                 }
             }
 
