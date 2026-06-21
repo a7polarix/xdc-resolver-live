@@ -597,8 +597,8 @@ async function initApp() {
         return c;
     }
 
-    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, falconSig = null, pqcResults = null) {
-        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, falconSig, pqcResults);
+    async function displayInvoice(h, amt, from, to, sym, inv, ts, catFrom = null, catTo = null, amtStr = null, usdValue = null, signature = null, pqcResults = null) {
+        const full = await buildInvoiceData(h, amt, from, to, sym, inv, ts, catFrom, catTo, amtStr, usdValue, signature, null, pqcResults);
         const client = buildClientData(full);
         const qrD = { hash: h, from, to, amount: amtStr || `${amt} ${sym}`, date: ts, explorer: getExplorerUrl(h), usd: usdValue };
         const qrURL = await qrDataURL(JSON.stringify(qrD));
@@ -757,37 +757,9 @@ async function initApp() {
             await tx.wait();
             els.txStatus.innerHTML += '<br>✅ Succès !';
 
-            // === ÉTAPE 2: Signature FALCON du hash de transaction (post-quantique) ===
-            let falconSig = null;
-            if (falconEnabled) {
-                els.txStatus.innerHTML += '<br>🔐 Signature FALCON...';
-                try {
-                    falconSig = await signTxWithFalcon(tx.hash);
-                    if (falconSig) {
-                        els.txStatus.innerHTML += `<br>✅ FALCON signé ! <span style="font-size:0.75rem;">(${falconSig.algorithm}-${falconSig.variant}, ${falconSig.standard})</span>`;
-                        // Purger les anciennes clés et régénérer pour la prochaine transaction
-                        localStorage.removeItem('falcon_keys_falcon_falcon512');
-                        localStorage.removeItem('falcon_keys_falcon_falcon1024');
-                        localStorage.removeItem('falcon_keys_ml-dsa_ml_dsa65');
-                        localStorage.removeItem('falcon_keys_ml-dsa_ml_dsa44');
-                        localStorage.removeItem('falcon_keys_ml-dsa_ml_dsa87');
-                        falconKeys = null;
-                        falconGenerateKeys(falconAlgo, falconVariant).then(function(keys) {
-                            falconKeys = keys;
-                            falconSaveKeys(keys);
-                            console.log('[FALCON] Clés régénérées après signature');
-                        }).catch(function(e) {
-                            console.warn('[FALCON] Échec régénération clés:', e.message);
-                        });
-                    } else {
-                        els.txStatus.innerHTML += '<br>⚠️ FALCON indisponible (clés non générées)';
-                    }
-                } catch (e) {
-                    els.txStatus.innerHTML += `<br>⚠️ FALCON erreur: ${e.message}`;
-                }
-            }
+            els.txStatus.innerHTML += '<br>✅ Succès !';
 
-            // === ÉTAPE 2.5: PQC auto-sign (all checked algorithms) ===
+            // === ÉTAPE 2: PQC auto-sign (all checked algorithms incl. FALCON) ===
             let pqcResults = null;
             if (window.pqcAutoSign) {
                 try {
@@ -795,6 +767,8 @@ async function initApp() {
                     const signed = Object.keys(pqcResults);
                     if (signed.length > 0) {
                         els.txStatus.innerHTML += `<br>🔐 PQC: ${signed.join(', ')} signé(s)`;
+                    } else {
+                        els.txStatus.innerHTML += '<br>⚠️ PQC: aucun algorithme sélectionné ou erreur';
                     }
                 } catch(e) { console.warn('PQC auto-sign failed:', e); }
             }
@@ -819,7 +793,7 @@ async function initApp() {
                     originalFrom: d.from, originalTo: d.to,
                     invoiceNumber: d.invoiceNumber, timestampUTC: d.timestampUTC,
                     usdcValue: d.usdcValue, catFrom: fromCat, catTo: toCat, amtStr: null,
-                    signature: eipSig, falconSignature: falconSig, pqcResults: pqcResults,
+                    signature: eipSig, falconSignature: null, pqcResults: pqcResults,
                 };
                 const receiptBtn = document.getElementById('receiptBtn');
                 receiptBtn.disabled = false; receiptBtn.classList.add('ready');
