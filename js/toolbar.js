@@ -46,8 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- PQC: Load saved checkbox states ---
     function getPqcChoices() {
-        try { return JSON.parse(localStorage.getItem('pqc_choices') || '{}'); }
-        catch { return {}; }
+        try {
+            const saved = JSON.parse(localStorage.getItem('pqc_choices') || '{}');
+            // Default: all algorithms enabled if never saved
+            if (Object.keys(saved).length === 0) {
+                return { falcon: true, 'ml-dsa': true, 'slh-dsa': true, 'ml-kem': true };
+            }
+            return saved;
+        } catch { return { falcon: true, 'ml-dsa': true, 'slh-dsa': true, 'ml-kem': true }; }
     }
     function savePqcChoices(choices) {
         localStorage.setItem('pqc_choices', JSON.stringify(choices));
