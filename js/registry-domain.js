@@ -1,4 +1,4 @@
-DOMAIN_CATEGORY.js  pourquoi tu inventes alors que je t'ai donné un fichier se nomant info.js ???!!! : // api/info.js
+// DOMAIN_CATEGORY.js
 // ============================================================
 // DICTIONNAIRE DES CATÉGORIES (copié depuis index.html)
 // ============================================================
