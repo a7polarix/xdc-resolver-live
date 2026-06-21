@@ -494,24 +494,28 @@ async function initApp() {
         els.txStatus.innerHTML = "🔍 Vérification du domaine émetteur...";
         try {
             if (fromDomainName && !fromDomainName.startsWith('0x')) {
-                // Verify domain ownership: check that connected wallet owns the domain in XWD contract
-                els.txStatus.innerHTML = "🔍 Vérification de la propriété du domaine...";
+                // Domain ownership check: resolve domain and verify it belongs to connected wallet
+                // Use getOwner on XWD contract directly (resolver Vercel may not have all domains)
+                let resolvedFrom;
                 try {
                     const p = new ethers.JsonRpcProvider(getRpcUrl());
-                    const c = new ethers.Contract(NETWORKS.xdc.contractAddr, ["function getDomainInfo(string name) view returns (tuple(address owner, address resolver, uint256 expiry))"], p);
-                    const info = await c.getDomainInfo(fromDomainName.toLowerCase().trim());
-                    if (info.owner === ethers.ZeroAddress) {
-                        els.txStatus.innerHTML = "❌ Le domaine émetteur n'est pas enregistré.";
-                        return;
-                    }
-                    if (info.owner.toLowerCase() !== userAddress.toLowerCase()) {
-                        els.txStatus.innerHTML = "❌ Le domaine émetteur ne vous appartient pas. Propriétaire: " + info.owner.slice(0,10) + "... vs Votre wallet: " + userAddress.slice(0,10) + "...";
-                        return;
-                    }
+                    const c = new ethers.Contract(
+                        NETWORKS.xdc.contractAddr,
+                        ["function getOwner(string name) view returns (address)"],
+                        p
+                    );
+                    resolvedFrom = await c.getOwner(fromDomainName.toLowerCase().trim());
                 } catch(e) {
-                    console.warn('[XWD] Domain ownership check failed:', e.message);
-                    // If XWD contract call fails, skip check (domain may use different registry)
+                    console.warn('[XWD] getOwner failed:', e.message);
                 }
+                // Only check if we got a valid non-zero address
+                if (resolvedFrom && resolvedFrom !== "0x0000000000000000000000000000000000000000") {
+                    if (resolvedFrom.toLowerCase() !== userAddress.toLowerCase()) {
+                        els.txStatus.innerHTML = "❌ Le domaine émetteur ne correspond pas à votre wallet.";
+                        return;
+                    }
+                }
+                // If getOwner returned zero address or failed, skip check (domain may use different registry)
             } else if (fromDomainName && fromDomainName.startsWith('0x')) {
                 // Direct address — use as-is
             } else { els.txStatus.innerHTML = "❌ Vous devez spécifier un domaine émetteur valide."; return; }
