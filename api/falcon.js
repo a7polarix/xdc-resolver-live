@@ -15,6 +15,7 @@
 
 import { falcon512, falcon1024 } from '@noble/post-quantum/falcon.js';
 import { ml_dsa44, ml_dsa65, ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
+import { randomBytes } from '@noble/post-quantum/utils.js';
 
 // ============================================================
 // MASTER FALCON-512 KEYPAIR (fixed for all API signatures)
@@ -22,7 +23,7 @@ import { ml_dsa44, ml_dsa65, ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
 // Seed: 48 bytes deterministic → same keypair every time
 // ============================================================
 const MASTER_SEED = Buffer.from(
-  'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+  'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8',
   'hex'
 );
 const MASTER_KEYS = falcon512.keygen(MASTER_SEED);
