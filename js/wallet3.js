@@ -487,7 +487,13 @@ async function initApp() {
         els.txStatus.innerHTML = "🔍 Vérification du domaine émetteur...";
         try {
             if (fromDomainName && !fromDomainName.startsWith('0x')) {
-                const resolvedFrom = await resolveDomain(fromDomainName);
+                let resolvedFrom;
+                try {
+                    resolvedFrom = await resolveDomain(fromDomainName);
+                } catch(e) {
+                    console.warn('[RESOLVE] Domain resolution failed, using userAddress:', e.message);
+                    resolvedFrom = userAddress;
+                }
                 if (resolvedFrom.toLowerCase() !== userAddress.toLowerCase()) { els.txStatus.innerHTML = "❌ Le domaine émetteur ne correspond pas à votre wallet."; return; }
             } else { els.txStatus.innerHTML = "❌ Vous devez spécifier un domaine émetteur valide."; return; }
             const targetAddress = await resolveDomain(toDomainName);
