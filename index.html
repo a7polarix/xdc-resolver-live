@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" value="0">
     <title>Fleurs de Lys – Saint Empire Numérique</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -158,42 +161,8 @@
         .zoom-buttons button:hover { background: rgba(255,215,0,0.3); }
         .leaflet-control-zoom { display: none; }
         #receiptBtn.ready { background: #38a169 !important; color: white !important; font-weight: 700; border-color: #38a169 !important; }
-        .categories-on-map {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(8px);
-            border-radius: 0 0 16px 16px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            padding: 0.5rem 0.8rem;
-            z-index: 1001;
-            justify-content: center;
-        }
-        .categories-on-map button {
-            background: transparent;
-            border: 1px solid rgba(255,215,0,0.6);
-            color: #ffd700;
-            border-radius: 40px;
-            padding: 0.3rem 0.8rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-        .categories-on-map button.active {
-            background: #38a169;
-            border-color: #38a169;
-            color: white;
-        }
-        .categories-on-map button:hover {
-            background: rgba(255,215,0,0.2);
-            border-color: #ffd700;
-        }
+        .toolbar-separator { width: 1px; height: 24px; background: #cfdde6; margin: 0 0.3rem; flex-shrink: 0; }
+        body.theme-dark .toolbar-separator { background: #444; }
         .category-result {
             position: absolute;
             bottom: 90px;
@@ -210,9 +179,7 @@
             overflow-y: auto;
             display: none;
         }
-        .category-result.show {
-            display: block;
-        }
+        .category-result.show { display: block; }
         .category-result .close-btn {
             float: right;
             background: transparent;
@@ -223,9 +190,7 @@
             padding: 0 4px;
             margin-top: -4px;
         }
-        .category-result .close-btn:hover {
-            color: white;
-        }
+        .category-result .close-btn:hover { color: white; }
 
         /* ===== AJOUTS POUR LA FACTURE ===== */
         .invoice-actions {
@@ -254,16 +219,233 @@
         .invoice-actions button.ready:hover {
             background: #2f855a !important;
         }
+
+        /* ===== FALCON POST-QUANTUM SIGNATURES ===== */
+        .falcon-panel {
+            padding: 0.8rem;
+        }
+        .falcon-panel h3 {
+            font-size: 1.1rem;
+            margin: 0 0 0.6rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .falcon-panel h4 {
+            font-size: 0.95rem;
+            margin: 0.8rem 0 0.4rem 0;
+            color: #2c3e4e;
+        }
+        body.theme-dark .falcon-panel h4 { color: #ffd700; }
+        .falcon-section {
+            background: rgba(0,0,0,0.04);
+            border-radius: 16px;
+            padding: 0.8rem;
+            margin-bottom: 0.6rem;
+        }
+        body.theme-dark .falcon-section { background: rgba(255,255,255,0.06); }
+        .falcon-section label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+        }
+        .falcon-section input, .falcon-section textarea, .falcon-section select {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            border-radius: 12px;
+            border: 1px solid #cfdde6;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+            box-sizing: border-box;
+        }
+        body.theme-dark .falcon-section input,
+        body.theme-dark .falcon-section textarea,
+        body.theme-dark .falcon-section select {
+            border-color: #444;
+        }
+        .falcon-btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .falcon-btn {
+            padding: 0.7rem 1.2rem !important;
+            font-size: 0.9rem !important;
+            font-weight: 700 !important;
+            border-radius: 40px !important;
+            border: none !important;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .falcon-btn-primary {
+            background: #2c3e4e !important;
+            color: white !important;
+        }
+        .falcon-btn-primary:hover {
+            background: #1a2b4a !important;
+        }
+        .falcon-btn-success {
+            background: #38a169 !important;
+            color: white !important;
+        }
+        .falcon-btn-success:hover {
+            background: #2f855a !important;
+        }
+        .falcon-btn-warning {
+            background: #d69e2e !important;
+            color: white !important;
+        }
+        .falcon-btn-warning:hover {
+            background: #b7791f !important;
+        }
+        .falcon-btn-danger {
+            background: #c0392b !important;
+            color: white !important;
+        }
+        .falcon-btn-danger:hover {
+            background: #a93226 !important;
+        }
+        .falcon-btn-hybrid {
+            background: linear-gradient(135deg, #2c3e4e, #38a169) !important;
+            color: white !important;
+        }
+        .falcon-btn-hybrid:hover {
+            background: linear-gradient(135deg, #1a2b4a, #2f855a) !important;
+        }
+        .falcon-status {
+            margin-top: 0.5rem;
+            padding: 0.6rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            word-break: break-all;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .falcon-status-ok {
+            background: rgba(56,161,105,0.15);
+            border: 1px solid #38a169;
+            color: #2f855a;
+        }
+        body.theme-dark .falcon-status-ok {
+            background: rgba(56,161,105,0.25);
+            color: #68d391;
+        }
+        .falcon-status-err {
+            background: rgba(192,57,43,0.15);
+            border: 1px solid #c0392b;
+            color: #c0392b;
+        }
+        body.theme-dark .falcon-status-err {
+            background: rgba(192,57,43,0.25);
+            color: #fc8181;
+        }
+        .falcon-status-info {
+            background: rgba(44,62,78,0.1);
+            border: 1px solid #2c3e4e;
+            color: #2c3e4e;
+        }
+        body.theme-dark .falcon-status-info {
+            background: rgba(255,215,0,0.1);
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+        .falcon-algo-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.3rem;
+        }
+        .falcon-badge-falcon { background: #2c3e4e; color: white; }
+        .falcon-badge-dilithium { background: #805ad5; color: white; }
+        .falcon-badge-hybrid { background: linear-gradient(135deg, #2c3e4e, #38a169); color: white; }
+        .falcon-badge-ecdsa { background: #e2e8f0; color: #2c3e4e; }
+        body.theme-dark .falcon-badge-ecdsa { background: #444; color: #fff; }
+
+        /* ===== FALCON TOGGLE DANS TRANSACTION ===== */
+        .falcon-tx-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin: 0.6rem 0;
+            padding: 0.5rem 0.8rem;
+            background: rgba(56,161,105,0.08);
+            border-radius: 12px;
+            border: 1px solid rgba(56,161,105,0.3);
+        }
+        body.theme-dark .falcon-tx-toggle {
+            background: rgba(56,161,105,0.15);
+            border-color: rgba(56,161,105,0.4);
+        }
+        .falcon-toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            flex: 1;
+        }
+        .falcon-toggle-label input[type="checkbox"] { display: none; }
+        .falcon-toggle-slider {
+            width: 44px;
+            height: 24px;
+            border-radius: 12px;
+            background: #ccc;
+            position: relative;
+            transition: background 0.3s;
+            flex-shrink: 0;
+        }
+        .falcon-toggle-slider::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: white;
+            transition: transform 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .falcon-toggle-label input:checked + .falcon-toggle-slider { background: #38a169; }
+        .falcon-toggle-label input:checked + .falcon-toggle-slider::after { transform: translateX(20px); }
+        .falcon-toggle-text { user-select: none; }
+        .falcon-tx-info {
+            font-size: 0.7rem;
+            color: #38a169;
+            margin-bottom: 0.4rem;
+            padding-left: 0.2rem;
+        }
+        body.theme-dark .falcon-tx-info { color: #68d391; }
+
+        /* ===== API TABS ===== */
+        .api-tabs { display: flex; gap: 0.3rem; margin-bottom: 0.6rem; }
+        .api-tab { padding: 0.4rem 0.8rem; border-radius: 20px; border: 1px solid #cfdde6; background: transparent; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: inherit; transition: all 0.2s; }
+        .api-tab.active { background: #38a169; color: white; border-color: #38a169; }
+        .api-tab:hover { background: rgba(56,161,105,0.2); }
+        body.theme-dark .api-tab { border-color: #444; }
+        body.theme-dark .api-tab.active { background: #38a169; }
+        .falcon-key-display {
+            font-family: monospace; font-size: 0.7rem; word-break: break-all;
+            background: rgba(0,0,0,0.06); padding: 0.4rem 0.6rem; border-radius: 8px;
+            margin-top: 0.3rem; max-height: 60px; overflow-y: auto;
+        }
+        body.theme-dark .falcon-key-display { background: rgba(255,255,255,0.08); }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.16.0/dist/ethers.umd.min.js" defer></script>
+    <script type="module" src="js/falcon-pqc.js?v=1"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="js/themes.js" defer></script>
-    <script src="js/map.js" defer></script>
-    <script src="js/networks.js" defer></script>
-    <script src="js/media.js" defer></script>
-    <script src="js/init.js" defer></script>
-    <script src="js/wallet.js" defer></script>
-    <script src="js/toolbar.js" defer></script>
+    <script src="js/themes.js?v=3" defer></script>
+    <script src="js/map.js?v=3" defer></script>
+    <script src="js/networks.js?v=3" defer></script>
+    <script src="js/media.js?v=3" defer></script>
+    <script src="js/init.js?v=3" defer></script>
+    <script src="js/wallet3.js?v=4" defer></script>
+    <script src="js/toolbar2.js?v=3" defer></script>
     <!-- ========== WIDGET GOOGLE TRANSLATE ========== -->
     <script>
         function googleTranslateElementInit() {
@@ -325,15 +507,31 @@
                 <option value="sepolia">🟠 Sepolia Testnet</option>
                 <option value="apothem">🔵 XDC Apothem Testnet</option>
             </select>
-            <div class="toolbar" id="toolbar">
-                <button data-action="files" title="📁 Configurer les clés API (AIS, AirLabs, Trains…)">📁</button>
-                <button data-action="ai" title="🤖 Lier votre IA (URL du modèle)">🤖</button>
-                <button data-action="radio" title="📻 Radio (mode secours – Web Serial / Compagnon)">📻</button>
-                <button data-action="maritime" title="🌊 Trafic maritime – clé API aisstream.io">🌊</button>
-                <button data-action="trains" title="🚂 Trafic ferroviaire – clé API SNCF">🚂</button>
-                <button data-action="aircraft" title="🛩️ Trafic aérien – clé AirLabs.co">🛩️</button>
-            </div>
             <span id="networkBadge" class="network-badge xdc">XDC</span>
+        </div>
+        <div class="toolbar" id="toolbar" style="position:relative;z-index:10000;">
+            <button data-action="maritime" title="🌊 Trafic maritime — clé API aisstream.io">🌊</button>
+            <button data-action="trains" title="🚂 Trafic ferroviaire — clé API SNCF">🚂</button>
+            <button data-action="aircraft" title="🛩️ Trafic aérien — clé AirLabs.co">🛩️</button>
+            <button data-action="earthquakes" title="🌋 Séismes — temps réel USGS">🌋</button>
+            <button data-action="ai" title="🤖 Lier votre IA (URL du modèle)">🤖</button>
+            <button data-action="radio" title="📻 Radio (mode secours)">📻</button>
+            <button data-action="falcon" title="🔐 Signatures Post-Quantiques — FALCON + ML-DSA">🔐</button>
+            <div class="toolbar-separator"></div>
+            <button data-category="compute" title="Compute — Calcul & IA">💻</button>
+            <button data-category="energy" title="Energy — Energie & Ressources">⚡</button>
+            <button data-category="finance" title="Finance — Finance & Actifs">💰</button>
+            <button data-category="minerals" title="Minerals — Matieres premieres">💎</button>
+            <button data-category="commodity" title="Commodity — Denrees & Agriculture">🌾</button>
+            <button data-category="network" title="Network — Reseau & Infrastructure">🌐</button>
+            <button data-category="industry" title="Industry — Industrie & Production">🏭</button>
+            <button data-category="mobility" title="Mobility — Transport & Mobilite">🚗</button>
+            <button data-category="geopolitics" title="Geopolitique — Zones & Territoires">🗺️</button>
+            <button data-category="gastronomy" title="Gastronomy — Alimentation & Terroir">🍷</button>
+            <button data-category="art" title="Art — Art & Culture">🎨</button>
+            <button data-category="health" title="Health — Sante & Bien-etre">🏥</button>
+            <button data-category="pnj" title="PNJ — Entites & Personnages">👤</button>
+            <button data-category="other" title="Other — Autre">❓</button>
         </div>
     </div>
 
@@ -346,22 +544,6 @@
                         <button id="zoomInBtn" title="Zoom avant">+</button>
                         <button id="zoomOutBtn" title="Zoom arrière">−</button>
                     </div>
-                </div>
-                <div class="categories-on-map" id="categoriesBar">
-                    <button data-category="compute">💻 Compute</button>
-                    <button data-category="energy">⚡ Energy</button>
-                    <button data-category="finance">💰 Finance</button>
-                    <button data-category="minerals">💎 Minerals</button>
-                    <button data-category="commodity">🌾 Commodity</button>
-                    <button data-category="network">🌐 Network</button>
-                    <button data-category="industry">🏭 Industry</button>
-                    <button data-category="mobility">🚗 Mobility</button>
-                    <button data-category="geopolitics">🗺️ Geo</button>
-                    <button data-category="gastronomy">🍷 Food</button>
-                    <button data-category="art">🎨 Art</button>
-                    <button data-category="health">🏥 Health</button>
-                    <button data-category="pnj">👤 PNJ</button>
-                    <button data-category="other">❓ Other</button>
                 </div>
                 <div id="categoryResult" class="category-result">
                     <button class="close-btn" id="closeCategoryResult">✕</button>
@@ -396,6 +578,15 @@
                         <div class="form-row"><label>vers</label><input type="text" id="toDomain" placeholder="ex: gold.xdc" class="copyable"></div>
                         <div class="form-row"><label>montant</label><input type="number" id="amount" placeholder="montant" step="any"></div>
                         <div class="form-row"><label>devise</label><select id="token"></select></div>
+                        <div class="falcon-tx-toggle">
+                            <label class="falcon-toggle-label">
+                                <input type="checkbox" id="falconTxEnabled" checked>
+                                <span class="falcon-toggle-slider"></span>
+                                <span class="falcon-toggle-text">🔐 Signature Post-Quantique FALCON</span>
+                            </label>
+                            <span class="falcon-algo-badge falcon-badge-falcon" id="falconTxBadge">FALCON-512</span>
+                        </div>
+                        <div class="falcon-tx-info" id="falconTxInfo">Protection quantique active — NIST FIPS 206 (FN-DSA)</div>
                         <button id="sendBtn" disabled>📤 envoyer</button><div id="txStatus" class="status" style="margin-top:1rem;"></div>
                     </div>
                 </div>
@@ -443,7 +634,7 @@
                     <div class="collapsible-header" data-target="configSection"><h3>⚙️ Configuration (optionnelle)</h3></div>
                     <div class="collapsible-body" id="configSection">
                         <div class="form-row config-row"><label>📁 Fichier config (JSON)</label><input type="file" id="configFile" accept=".json" style="width:auto;flex:2;"><button id="loadConfigBtn" style="width:auto;">Charger</button></div>
-                        <div class="form-row config-row"><label>🧾 SIRET / Business reg.</label><input type="text" id="siretField" placeholder="123 456 789 00012" class="copyable"></div>
+                        <div class="form-row config-row"><label>🧾 SIRET / Business reg.</label><input type="text" id="siretField" placeholder="123 456 789 00012" value="78945612301951" class="copyable"></div>
                         <div class="form-row config-row"><label>🏷️ TVA (%)</label><input type="number" id="tvaField" placeholder="20" step="any" value="20"></div>
                         <div class="form-row config-row"><label>🏢 Adresse siège</label><input type="text" id="adresseSiegeField" placeholder="10 Rue de la Paix, Paris" class="copyable"></div>
                         <div class="form-row config-row"><label>📦 Objet prestation</label><input type="text" id="objetPrestationField" placeholder="Prestation photographique" class="copyable"></div>

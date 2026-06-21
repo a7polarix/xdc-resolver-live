@@ -1,185 +1,368 @@
 // api/falcon.js
 // ============================================================
-// FALCON — Post-Quantum Signature Module for EVA-01
+// FALCON — Post-Quantum Signature Module for Fleurs de Lys / EVA-01
 // ============================================================
-// Pure JS implementation of FALCON-512 / FALCON-1024
-// NIST PQC Round 3 (FN-DSA draft)
-// 
-// This is a functional implementation for EVA-01's
-// quantum-resistant signature verification system.
-// For production, use audited @noble/post-quantum or PQShield.
+// Uses @noble/post-quantum (v0.6.1+) — auditable, KAT-verified
+// Implementation: falcon512 / falcon1024 (Round 3)
+//
+// Also includes ML-DSA (Dilithium) per NIST FIPS 204
+// as a secondary PQC option.
+//
+// API contract: same function signatures & return shapes as the
+// previous (broken) implementation so pqc.js, FALCON_AUDIT.js,
+// and wallet3.js work unchanged.
 // ============================================================
 
-import { createHash, randomBytes } from 'crypto';
+import { falcon512, falcon1024 } from '@noble/post-quantum/falcon.js';
+import { ml_dsa44, ml_dsa65, ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
+import { randomBytes } from '@noble/post-quantum/utils.js';
 
 // ============================================================
-// FALCON PARAMETERS (NIST PQC Round 3)
+// CONSTANTS
 // ============================================================
 
 const FALCON_PARAMS = {
-    falcon512: {
-        n: 512,
-        q: 12289,
-        sigma: 1.17 * Math.sqrt(12289 / (2 * 512)),
-        signatureBytes: 666,
-        publicKeyBytes: 897,
-        secretKeyBytes: 1281,
-    },
-    falcon1024: {
-        n: 1024,
-        q: 12289,
-        sigma: 1.17 * Math.sqrt(12289 / (2 * 1024)),
-        signatureBytes: 1280,
-        publicKeyBytes: 1793,
-        secretKeyBytes: 2305,
-    },
+  falcon512:  { signatureBytes: 666,  publicKeyBytes: 897,  secretKeyBytes: 1281, nistLevel: 1 },
+  falcon1024: { signatureBytes: 1280, publicKeyBytes: 1793, secretKeyBytes: 2305, nistLevel: 5 },
+};
+
+const ML_DSA_PARAMS = {
+  ml_dsa44: { signatureBytes: 2420, publicKeyBytes: 1312, secretKeyBytes: 2560, nistLevel: 2, k: 4, l: 4, eta: 2 },
+  ml_dsa65: { signatureBytes: 3309, publicKeyBytes: 1952, secretKeyBytes: 4032, nistLevel: 3, k: 6, l: 5, eta: 4 },
+  ml_dsa87: { signatureBytes: 4627, publicKeyBytes: 2592, secretKeyBytes: 4896, nistLevel: 5, k: 8, l: 7, eta: 2 },
 };
 
 // ============================================================
-// SIMPLIFIED FALCON (Fast Fourier Lattice-based Compact Signatures)
+// HELPERS
 // ============================================================
-// NOTE: This is a functional but simplified implementation.
-// For full NIST-compliant FALCON, use @noble/post-quantum.
-// This version provides the API interface and key management
-// compatible with EVA-01's quantum-resistant architecture.
+
+function toBytes(input) {
+  if (typeof input === 'string') {
+    if (input.startsWith('0x') || input.startsWith('0X')) {
+      const hex = input.slice(2);
+      const buf = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2) {
+        buf[i / 2] = parseInt(hex.substr(i, 2), 16);
+      }
+      return buf;
+    }
+    return new TextEncoder().encode(input);
+  }
+  if (Buffer.isBuffer(input)) return new Uint8Array(input);
+  if (input instanceof Uint8Array) return input;
+  return new TextEncoder().encode(String(input));
+}
+
+function bytesToHex(bytes) {
+  return '0x' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ============================================================
+// FALCON KEY GENERATION
+// ============================================================
 
 export async function generateFalconKeys(variant = 'falcon512') {
-    const params = FALCON_PARAMS[variant];
-    if (!params) throw new Error(`Unknown variant: ${variant}`);
-    
-    // Generate deterministic keys from random seed
-    const seed = randomBytes(48);
-    const secretKeySeed = randomBytes(params.secretKeyBytes);
-    const publicKeySeed = randomBytes(params.publicKeyBytes);
-    
-    return {
-        variant,
-        algorithm: 'FALCON',
-        standard: 'NIST PQC Round 3',
-        publicKey: '0x' + Buffer.from(publicKeySeed).toString('hex'),
-        secretKey: '0x' + Buffer.from(secretKeySeed).toString('hex'),
-        publicKeyBytes: params.publicKeyBytes,
-        secretKeyBytes: params.secretKeyBytes,
-        n: params.n,
-        q: params.q,
-        quantumResistant: true,
-        generated: new Date().toISOString(),
-    };
+  if (!FALCON_PARAMS[variant]) throw new Error(`Unknown FALCON variant: ${variant}`);
+
+  const params = FALCON_PARAMS[variant];
+  const seed = randomBytes(48);
+  const noble = variant === 'falcon1024' ? falcon1024 : falcon512;
+  const keys = noble.keygen(seed);
+
+  return {
+    variant,
+    algorithm: 'FALCON',
+    standard: 'Falcon Round 3 (NIST FIPS 206 / FN-DSA draft)',
+    nistLevel: params.nistLevel,
+    publicKey: bytesToHex(keys.publicKey),
+    secretKey: bytesToHex(keys.secretKey),
+    seed: bytesToHex(seed),
+    publicKeyBytes: keys.publicKey.length,
+    secretKeyBytes: keys.secretKey.length,
+    signatureBytes: params.signatureBytes,
+    quantumResistant: true,
+    latticeBased: true,
+    hardProblem: 'NTRU Short Integer Solution (SIS)',
+    generated: new Date().toISOString(),
+  };
 }
+
+// ============================================================
+// FALCON SIGNING
+// ============================================================
 
 export async function signMessage(message, secretKeyHex, variant = 'falcon512') {
-    const params = FALCON_PARAMS[variant];
-    if (!params) throw new Error(`Unknown variant: ${variant}`);
-    
-    // Hash the message
-    const msgBytes = new TextEncoder().encode(message);
-    const hash = createHash('sha3-256').update(msgBytes).digest();
-    
-    // Generate signature based on hash + secret key
-    const secretKeyBytes = Buffer.from(secretKeyHex.replace('0x', ''), 'hex');
-    const sigInput = Buffer.concat([hash, secretKeyBytes.slice(0, 32)]);
-    const signature = createHash('sha3-512')
-        .update(sigInput)
-        .digest()
-        .slice(0, params.signatureBytes);
-    
-    return {
-        signature: '0x' + signature.toString('hex'),
-        signatureBytes: signature.length,
-        message,
-        variant,
-        algorithm: 'FALCON',
-        standard: 'NIST PQC Round 3',
-        quantumResistant: true,
-    };
+  if (!FALCON_PARAMS[variant]) throw new Error(`Unknown FALCON variant: ${variant}`);
+  if (!message && message !== '') throw new Error('Message required');
+  if (!secretKeyHex) throw new Error('Secret key required');
+
+  const noble = variant === 'falcon1024' ? falcon1024 : falcon512;
+  const msgBytes = toBytes(message);
+  const skBytes = toBytes(secretKeyHex);
+
+  const sigBytes = noble.sign(msgBytes, skBytes);
+
+  return {
+    signature: bytesToHex(sigBytes),
+    signatureBytes: sigBytes.length,
+    message: typeof message === 'string' ? message : bytesToHex(msgBytes),
+    variant,
+    algorithm: 'FALCON',
+    standard: 'Falcon Round 3 (NIST FIPS 206 / FN-DSA draft)',
+    nistLevel: FALCON_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+    latticeBased: true,
+  };
 }
+
+// ============================================================
+// FALCON VERIFICATION
+// ============================================================
 
 export async function verifySignature(message, signatureHex, publicKeyHex, variant = 'falcon512') {
-    const params = FALCON_PARAMS[variant];
-    if (!params) throw new Error(`Unknown variant: ${variant}`);
-    
-    // Recompute expected signature
-    const msgBytes = new TextEncoder().encode(message);
-    const hash = createHash('sha3-256').update(msgBytes).digest();
-    
-    const publicKeyBytes = Buffer.from(publicKeyHex.replace('0x', ''), 'hex');
-    const sigInput = Buffer.concat([hash, publicKeyBytes.slice(0, 32)]);
-    const expectedSig = createHash('sha3-512')
-        .update(sigInput)
-        .digest()
-        .slice(0, params.signatureBytes);
-    
-    const providedSig = Buffer.from(signatureHex.replace('0x', ''), 'hex');
-    
-    // Constant-time comparison
-    const valid = providedSig.length === expectedSig.length &&
-        crypto.subtle ? null : null; // Node.js doesn't have crypto.subtle
-    
-    // Simple comparison (in production, use timingSafeEqual)
-    let isValid = providedSig.length === expectedSig.length;
-    if (isValid) {
-        for (let i = 0; i < providedSig.length; i++) {
-            if (providedSig[i] !== expectedSig[i]) {
-                isValid = false;
-                break;
-            }
-        }
-    }
-    
-    return {
-        valid: isValid,
-        message,
-        variant,
-        algorithm: 'FALCON',
-        quantumResistant: true,
-    };
+  if (!FALCON_PARAMS[variant]) throw new Error(`Unknown FALCON variant: ${variant}`);
+  if (!message && message !== '') throw new Error('Message required');
+  if (!signatureHex) throw new Error('Signature required');
+  if (!publicKeyHex) throw new Error('Public key required');
+
+  const noble = variant === 'falcon1024' ? falcon1024 : falcon512;
+  const msgBytes = toBytes(message);
+  const sigBytes = toBytes(signatureHex);
+  const pkBytes = toBytes(publicKeyHex);
+
+  let valid = false;
+  try {
+    valid = noble.verify(sigBytes, msgBytes, pkBytes);
+  } catch {
+    valid = false;
+  }
+
+  return {
+    valid,
+    signatureLength: sigBytes.length,
+    expectedLength: FALCON_PARAMS[variant].signatureBytes,
+    message: typeof message === 'string' ? message : bytesToHex(msgBytes),
+    variant,
+    algorithm: 'FALCON',
+    standard: 'Falcon Round 3 (NIST FIPS 206 / FN-DSA draft)',
+    nistLevel: FALCON_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+    latticeBased: true,
+    verifiedAt: new Date().toISOString(),
+  };
 }
 
 // ============================================================
-// HYBRID: ECDSA + FALCON (dual signature)
+// HYBRID SIGNING: ECDSA + FALCON (dual signature)
 // ============================================================
 
-export async function hybridSign(message, falconSecretKeyHex, classicSignatureHex) {
-    const falconResult = await signMessage(message, falconSecretKeyHex);
-    return {
-        hybrid: true,
-        falcon: {
-            signature: falconResult.signature,
-            algorithm: 'FALCON-512',
-            quantumResistant: true,
-        },
-        classic: {
-            signature: classicSignatureHex,
-            algorithm: 'ECDSA',
-            quantumResistant: false,
-        },
-        message,
-        security: 'If quantum computer breaks ECDSA, FALCON still protects integrity',
-    };
+export async function hybridSign(message, falconSecretKeyHex, classicSignatureHex, variant = 'falcon512') {
+  const falconResult = await signMessage(message, falconSecretKeyHex, variant);
+  return {
+    hybrid: true,
+    falcon: {
+      signature: falconResult.signature,
+      algorithm: `FALCON-${variant === 'falcon512' ? '512' : '1024'}`,
+      standard: 'Falcon Round 3',
+      quantumResistant: true,
+    },
+    classic: {
+      signature: classicSignatureHex,
+      algorithm: 'ECDSA (secp256k1)',
+      quantumResistant: false,
+    },
+    message: typeof message === 'string' ? message : bytesToHex(toBytes(message)),
+    security: 'If quantum computer breaks ECDSA, FALCON still protects integrity',
+    bothRequired: true,
+    generated: new Date().toISOString(),
+  };
 }
 
 // ============================================================
-// KEY SIZES INFO
+// ML-DSA (Dilithium) KEY GENERATION
+// ============================================================
+
+export async function generateDilithiumKeys(variant = 'ml_dsa65') {
+  if (!ML_DSA_PARAMS[variant]) throw new Error(`Unknown ML-DSA variant: ${variant}`);
+
+  const params = ML_DSA_PARAMS[variant];
+  const seed = randomBytes(32);
+  const noble = variant === 'ml_dsa44' ? ml_dsa44 : variant === 'ml_dsa87' ? ml_dsa87 : ml_dsa65;
+  const keys = noble.keygen(seed);
+
+  return {
+    variant,
+    algorithm: 'ML-DSA',
+    standard: 'NIST FIPS 204',
+    nistLevel: params.nistLevel,
+    publicKey: bytesToHex(keys.publicKey),
+    secretKey: bytesToHex(keys.secretKey),
+    seed: bytesToHex(seed),
+    publicKeyBytes: keys.publicKey.length,
+    secretKeyBytes: keys.secretKey.length,
+    signatureBytes: params.signatureBytes,
+    k: params.k,
+    l: params.l,
+    eta: params.eta,
+    quantumResistant: true,
+    latticeBased: true,
+    hardProblem: 'Module-LWE / Module-SIS',
+    generated: new Date().toISOString(),
+  };
+}
+
+// ============================================================
+// ML-DSA (Dilithium) SIGNING
+// ============================================================
+
+export async function signMessageDilithium(message, secretKeyHex, variant = 'ml_dsa65') {
+  if (!ML_DSA_PARAMS[variant]) throw new Error(`Unknown ML-DSA variant: ${variant}`);
+  if (!message && message !== '') throw new Error('Message required');
+  if (!secretKeyHex) throw new Error('Secret key required');
+
+  const noble = variant === 'ml_dsa44' ? ml_dsa44 : variant === 'ml_dsa87' ? ml_dsa87 : ml_dsa65;
+  const msgBytes = toBytes(message);
+  const skBytes = toBytes(secretKeyHex);
+
+  const sigBytes = noble.sign(msgBytes, skBytes);
+
+  return {
+    signature: bytesToHex(sigBytes),
+    signatureBytes: sigBytes.length,
+    message: typeof message === 'string' ? message : bytesToHex(msgBytes),
+    variant,
+    algorithm: 'ML-DSA',
+    standard: 'NIST FIPS 204',
+    nistLevel: ML_DSA_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+    latticeBased: true,
+    hardProblem: 'Module-LWE / Module-SIS',
+  };
+}
+
+// ============================================================
+// ML-DSA (Dilithium) VERIFICATION
+// ============================================================
+
+export async function verifySignatureDilithium(message, signatureHex, publicKeyHex, variant = 'ml_dsa65') {
+  if (!ML_DSA_PARAMS[variant]) throw new Error(`Unknown ML-DSA variant: ${variant}`);
+  if (!message && message !== '') throw new Error('Message required');
+  if (!signatureHex) throw new Error('Signature required');
+  if (!publicKeyHex) throw new Error('Public key required');
+
+  const noble = variant === 'ml_dsa44' ? ml_dsa44 : variant === 'ml_dsa87' ? ml_dsa87 : ml_dsa65;
+  const msgBytes = toBytes(message);
+  const sigBytes = toBytes(signatureHex);
+  const pkBytes = toBytes(publicKeyHex);
+
+  let valid = false;
+  try {
+    valid = noble.verify(sigBytes, msgBytes, pkBytes);
+  } catch {
+    valid = false;
+  }
+
+  return {
+    valid,
+    signatureLength: sigBytes.length,
+    expectedLength: ML_DSA_PARAMS[variant].signatureBytes,
+    message: typeof message === 'string' ? message : bytesToHex(msgBytes),
+    variant,
+    algorithm: 'ML-DSA',
+    standard: 'NIST FIPS 204',
+    nistLevel: ML_DSA_PARAMS[variant].nistLevel,
+    quantumResistant: true,
+    latticeBased: true,
+    verifiedAt: new Date().toISOString(),
+  };
+}
+
+// ============================================================
+// UNIFIED PQC INTERFACE
+// ============================================================
+
+export async function generatePQCKeys(algorithm = 'falcon', variant) {
+  switch (algorithm.toLowerCase()) {
+    case 'falcon':   return generateFalconKeys(variant || 'falcon512');
+    case 'ml-dsa':
+    case 'dilithium': return generateDilithiumKeys(variant || 'ml_dsa65');
+    default: throw new Error(`Unknown PQC algorithm: ${algorithm}. Supported: falcon, ml-dsa`);
+  }
+}
+
+export async function signPQC(message, secretKey, algorithm = 'falcon', variant) {
+  switch (algorithm.toLowerCase()) {
+    case 'falcon':   return signMessage(message, secretKey, variant || 'falcon512');
+    case 'ml-dsa':
+    case 'dilithium': return signMessageDilithium(message, secretKey, variant || 'ml_dsa65');
+    default: throw new Error(`Unknown PQC algorithm: ${algorithm}`);
+  }
+}
+
+export async function verifyPQC(message, signature, publicKey, algorithm = 'falcon', variant) {
+  switch (algorithm.toLowerCase()) {
+    case 'falcon':   return verifySignature(message, signature, publicKey, variant || 'falcon512');
+    case 'ml-dsa':
+    case 'dilithium': return verifySignatureDilithium(message, signature, publicKey, variant || 'ml_dsa65');
+    default: throw new Error(`Unknown PQC algorithm: ${algorithm}`);
+  }
+}
+
+// ============================================================
+// FALCON INFO / METADATA
 // ============================================================
 
 export function getFalconInfo() {
-    return {
-        name: 'FALCON',
-        standard: 'NIST PQC Round 3 (FN-DSA draft)',
-        algorithm: 'Fast-Fourier Lattice-based Compact Signatures over NTRU',
-        securityLevel: '128-bit quantum security',
-        variants: {
-            falcon512: { signatureBytes: 666, publicKeyBytes: 897, secretKeyBytes: 1281 },
-            falcon1024: { signatureBytes: 1280, publicKeyBytes: 1793, secretKeyBytes: 2305 },
-        },
-        comparison: {
-            ECDSA: { signatureBytes: 64, quantumResistant: false },
-            FALCON_512: { signatureBytes: 666, quantumResistant: true },
-        },
-        eva01: {
-            vessel: 'Atlantis',
-            module: 'Module 2: Signatures Post-Quantiques',
-            status: 'active',
-        },
-    };
+  return {
+    name: 'FALCON',
+    fullName: 'Fast-Fourier Lattice-based Compact Signatures over NTRU',
+    standard: 'Falcon Round 3 (NIST FIPS 206 / FN-DSA draft)',
+    library: '@noble/post-quantum v0.6.1+',
+    status: 'active',
+    securityLevel: '128-bit (FALCON-512) / 256-bit (FALCON-1024) quantum security',
+    variants: {
+      falcon512: {
+        nistLevel: 1,
+        signatureBytes: 666,
+        publicKeyBytes: 897,
+        secretKeyBytes: 1281,
+        security: '128-bit classical / 128-bit quantum',
+      },
+      falcon1024: {
+        nistLevel: 5,
+        signatureBytes: 1280,
+        publicKeyBytes: 1793,
+        secretKeyBytes: 2305,
+        security: '256-bit classical / 256-bit quantum',
+      },
+    },
+    comparison: {
+      ECDSA_secp256k1: { signatureBytes: 64, publicKeyBytes: 33, quantumResistant: false },
+      FALCON_512:      { signatureBytes: 666, publicKeyBytes: 897, quantumResistant: true },
+      FALCON_1024:     { signatureBytes: 1280, publicKeyBytes: 1793, quantumResistant: true },
+      ML_DSA_65:       { signatureBytes: 3309, publicKeyBytes: 1952, quantumResistant: true },
+    },
+    hardProblem: 'NTRU Short Integer Solution (SIS)',
+    latticeBased: true,
+    quantumResistant: true,
+    eva01: {
+      vessel: 'EVA-01',
+      module: 'Module 2: Signatures Post-Quantiques',
+      domain: 'quantum.depin',
+      status: 'active',
+      layer: 'NFT quantum-resistant signature layer for eva-01.depin',
+    },
+    fleursDeLys: {
+      integration: 'pqc.js API',
+      purpose: 'Verify quantum-resistant signatures on domain ownership',
+      useCase: 'Protect eva-01.depin NFT from future quantum attacks',
+      endpoints: [
+        'POST /api/pqc.js?action=keys — Generate FALCON/ML-DSA key pair',
+        'POST /api/pqc.js?action=sign — Sign message',
+        'POST /api/pqc.js?action=verify — Verify signature',
+        'POST /api/pqc.js?action=hybrid — Hybrid ECDSA+FALCON sign',
+        'GET  /api/pqc.js?action=info — Algorithm info',
+      ],
+    },
+  };
 }
