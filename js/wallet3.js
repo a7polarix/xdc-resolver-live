@@ -216,9 +216,10 @@ async function initApp() {
         if (currentNetwork === 'xdc') {
             try {
                 const p = new ethers.JsonRpcProvider(getRpcUrl());
-                const c = new ethers.Contract(NETWORKS.xdc.contractAddr, ["function getAddress(string) view returns (address)"], p);
-                const a = await c.getAddress(domain.toLowerCase().trim());
-                if (a && a !== "0x0000000000000000000000000000000000000000") return a;
+                // Use getDomainInfo to get the OWNER address, not getAddress (returns resolver/contract)
+                const c = new ethers.Contract(NETWORKS.xdc.contractAddr, ["function getDomainInfo(string name) view returns (tuple(address owner, address resolver, uint256 expiry))"], p);
+                const info = await c.getDomainInfo(domain.toLowerCase().trim());
+                if (info.owner && info.owner !== "0x0000000000000000000000000000000000000000") return info.owner;
             } catch (e) {}
         }
         throw new Error("Domaine non résolu : " + domain);
