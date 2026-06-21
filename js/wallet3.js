@@ -249,26 +249,27 @@ async function initApp() {
 
     async function signTxWithFalcon(txHash) {
         if (!falconEnabled) return null;
-        if (!falconKeys) {
-            try {
-                falconKeys = await falconGenerateKeys(falconAlgo, falconVariant);
-                falconSaveKeys(falconKeys);
-            } catch (e) {
-                console.warn("FALCON key gen failed:", e);
-                return null;
-            }
-        }
         try {
-            const result = await falconSignMessage(txHash, falconKeys.secretKey, falconAlgo, falconVariant);
-            return {
-                signature: result.signature,
-                algorithm: falconAlgo,
-                variant: falconVariant,
-                standard: result.standard,
-                nistLevel: falconKeys.nistLevel,
-                publicKey: falconKeys.publicKey,
-                keyGenerated: !falconLoadKeys(falconAlgo, falconVariant),
-            };
+            // Sign via API (server holds master secret key)
+            const resp = await fetch('/api/pqc.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'sign', message: txHash, algorithm: 'falcon', variant: 'falcon512' })
+            });
+            const data = await resp.json();
+            if (data.success && data.signature) {
+                return {
+                    signature: data.signature,
+                    algorithm: 'falcon',
+                    variant: 'falcon512',
+                    standard: data.standard,
+                    nistLevel: data.nistLevel,
+                    publicKey: data.publicKey,
+                    keyGenerated: false,
+                };
+            }
+            console.warn("FALCON API sign failed:", data.error);
+            return null;
         } catch (e) { console.warn("FALCON sign failed:", e); return null; }
     }
 

@@ -20,6 +20,8 @@ import {
     generatePQCKeys,
     signPQC,
     verifyPQC,
+    MASTER_PK,
+    MASTER_SK,
 } from './falcon.js';
 
 export default async function handler(req, res) {
@@ -73,6 +75,9 @@ export default async function handler(req, res) {
                 } else {
                     return res.status(400).json({ error: `Unknown algorithm: ${algorithm}. Use: falcon, ml-dsa` });
                 }
+                // Never expose master secret key to client
+                if (result.secretKey) delete result.secretKey;
+                if (result.seed) delete result.seed;
                 return res.status(200).json({ success: true, ...result });
             }
 
@@ -81,15 +86,28 @@ export default async function handler(req, res) {
                 if (method !== 'POST') return res.status(405).json({ error: 'POST required' });
                 const { message, secretKey, algorithm = 'falcon', variant = 'falcon512' } = params;
                 if (!message) return res.status(400).json({ error: 'message required' });
-                if (!secretKey) return res.status(400).json({ error: 'secretKey required' });
+
+                // For falcon512, use master key if no secretKey provided (server-side signing)
+                let effectiveSecretKey = secretKey;
+                if (algorithm === 'falcon' && variant === 'falcon512' && !effectiveSecretKey) {
+                    effectiveSecretKey = '0x' + Buffer.from(MASTER_SK).toString('hex');
+                }
+                if (!effectiveSecretKey) return res.status(400).json({ error: 'secretKey required' });
+
                 let result;
                 if (algorithm === 'falcon') {
-                    result = await signMessage(message, secretKey, variant);
+                    result = await signMessage(message, effectiveSecretKey, variant);
                 } else if (algorithm === 'ml-dsa' || algorithm === 'dilithium') {
-                    result = await signMessageDilithium(message, secretKey, variant);
+                    result = await signMessageDilithium(message, effectiveSecretKey, variant);
                 } else {
                     return res.status(400).json({ error: `Unknown algorithm: ${algorithm}` });
                 }
+
+                // Include master public key for falcon512
+                if (algorithm === 'falcon' && variant === 'falcon512') {
+                    result.publicKey = '0x' + Buffer.from(MASTER_PK).toString('hex');
+                }
+
                 return res.status(200).json({ success: true, ...result });
             }
 

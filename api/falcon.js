@@ -15,10 +15,22 @@
 
 import { falcon512, falcon1024 } from '@noble/post-quantum/falcon.js';
 import { ml_dsa44, ml_dsa65, ml_dsa87 } from '@noble/post-quantum/ml-dsa.js';
-import { randomBytes } from '@noble/post-quantum/utils.js';
 
 // ============================================================
-// CONSTANTS
+// MASTER FALCON-512 KEYPAIR (fixed for all API signatures)
+// Generated 2026-06-21 with @noble/post-quantum v0.6.1
+// Seed: 48 bytes deterministic → same keypair every time
+// ============================================================
+const MASTER_SEED = Buffer.from(
+  'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+  'hex'
+);
+const MASTER_KEYS = falcon512.keygen(MASTER_SEED);
+const MASTER_PK = MASTER_KEYS.publicKey;
+const MASTER_SK = MASTER_KEYS.secretKey;
+
+// Export for use by pqc.js
+export { MASTER_PK, MASTER_SK };
 // ============================================================
 
 const FALCON_PARAMS = {
@@ -65,8 +77,30 @@ export async function generateFalconKeys(variant = 'falcon512') {
   if (!FALCON_PARAMS[variant]) throw new Error(`Unknown FALCON variant: ${variant}`);
 
   const params = FALCON_PARAMS[variant];
+
+  // Use master keypair for falcon512 (fixed key for all API signatures)
+  if (variant === 'falcon512') {
+    return {
+      variant,
+      algorithm: 'FALCON',
+      standard: 'Falcon Round 3 (NIST FIPS 206 / FN-DSA draft)',
+      nistLevel: params.nistLevel,
+      publicKey: bytesToHex(MASTER_PK),
+      secretKey: bytesToHex(MASTER_SK),
+      seed: bytesToHex(MASTER_SEED),
+      publicKeyBytes: MASTER_PK.length,
+      secretKeyBytes: MASTER_SK.length,
+      signatureBytes: params.signatureBytes,
+      quantumResistant: true,
+      latticeBased: true,
+      hardProblem: 'NTRU Short Integer Solution (SIS)',
+      generated: new Date().toISOString(),
+    };
+  }
+
+  // For falcon1024, generate random keys (master not defined for 1024 yet)
   const seed = randomBytes(48);
-  const noble = variant === 'falcon1024' ? falcon1024 : falcon512;
+  const noble = falcon1024;
   const keys = noble.keygen(seed);
 
   return {
@@ -366,3 +400,4 @@ export function getFalconInfo() {
     },
   };
 }
+
