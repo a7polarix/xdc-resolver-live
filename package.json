@@ -8,6 +8,7 @@
     "@vercel/analytics": "^2.0.1",
     "@xns/xnsjs": "^1.0.3",
     "ethers": "^6.16.0",
+    "xdcdomainjs": "^1.0.2",
     "xrpl": "^4.6.0"
   }
 }
