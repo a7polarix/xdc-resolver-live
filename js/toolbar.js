@@ -133,9 +133,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ domain: fromDomain, txHash: txHash, algorithms: algos })
             });
+            if (!r.ok) {
+                console.warn('PQC auto-sign HTTP error:', r.status, r.statusText);
+                return {};
+            }
             const d = await r.json();
             if (d.success) return d.signatures || {};
-            console.warn('PQC auto-sign failed:', d.error);
+            console.warn('PQC auto-sign failed:', d.error || 'unknown error');
             return {};
         } catch(e) { console.warn('PQC auto-sign network error:', e); return {}; }
     };

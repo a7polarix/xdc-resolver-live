@@ -34,9 +34,16 @@ const XWD_CONTRACT = '0x295a7aB79368187a6CD03c464cfaAb04d799784E';
 // getDomainInfo(string) selector: 0x0fd468f0
 // tokenIdOf(string) selector: 0x10f4732e
 async function callXWD(domainName) {
-  const domainHex = Buffer.from(domainName).toString('hex').padEnd(64, '0');
-  const paddedLen = (domainName.length * 2).toString(16).padStart(64, '0');
-  const data = '0x0fd468f0' + paddedLen + domainHex;
+  // Encode: keccak256(domainName) for namehash-like lookup
+  // Use getDomainInfo(string) selector: 0x0fd468f0
+  const domainBytes = Buffer.from(domainName);
+  const selector = '0fd468f0';
+  // ABI encode string: offset (32 bytes) + length (32 bytes) + data (padded to 32 bytes)
+  const offset = '0000000000000000000000000000000000000000000000000000000000000020';
+  const length = domainBytes.length.toString(16).padStart(64, '0');
+  const dataHex = domainBytes.toString('hex');
+  const paddedData = dataHex.padEnd(Math.ceil(dataHex.length / 64) * 64, '0');
+  const data = '0x' + selector + offset + length + paddedData;
 
   try {
     const r = await fetch(XDC_RPC, {
@@ -45,35 +52,34 @@ async function callXWD(domainName) {
       body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data }, 'latest'], id: 1 })
     });
     const j = await r.json();
-    if (j.error || !j.result) return null;
+    if (j.error || !j.result || j.result === '0x' || j.result.length < 194) return null;
 
-    const result = j.result;
-    // Decode: (address owner, address resolver, uint256 expiry)
+    const result = j.result.padStart(194, '0');
     const owner = '0x' + result.slice(26, 66);
-    const resolver = '0x' + result.slice(90, 130);
-    const expiry = BigInt('0x' + result.slice(130, 194)).toString();
+    if (owner === '0x' + '0'.repeat(40)) return null;
 
-    // Also get tokenId
-    const tokenData = '0x10f4732e' + paddedLen + domainHex;
-    const r2 = await fetch(XDC_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data: tokenData }, 'latest'], id: 2 })
-    });
-    const j2 = await r2.json();
+    // Get tokenId via tokenIdOf(string) selector: 0x10f4732e
+    const tokenSelector = '10f4732e';
+    const tokenData = '0x' + tokenSelector + offset + length + paddedData;
     let tokenId = null;
-    if (!j2.error && j2.result && j2.result !== '0x' + '0'.repeat(64)) {
-      tokenId = BigInt(j2.result).toString();
-    }
+    try {
+      const r2 = await fetch(XDC_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: XWD_CONTRACT, data: tokenData }, 'latest'], id: 2 })
+      });
+      const j2 = await r2.json();
+      if (!j2.error && j2.result && j2.result !== '0x' && j2.result !== '0x' + '0'.repeat(64)) {
+        tokenId = parseInt(j2.result, 16).toString();
+      }
+    } catch {}
 
-    if (owner === '0x' + '0'.repeat(40)) return null; // Domain not found
-    return { owner, resolver, expiry, tokenId };
+    return { owner, tokenId };
   } catch (e) {
     console.error('[XWD-RPC] Error:', e.message);
     return null;
   }
 }
-
 // Deterministic seed from domain data
 function generateDomainSeed(domainData) {
   const { owner, tokenId, domainName } = domainData;
